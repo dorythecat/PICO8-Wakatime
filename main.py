@@ -7,6 +7,7 @@ from enum import Enum
 
 editor_mode_address = 0x0051D0C8 # Address indicating EDITOR mode
 game_mode_address = 0x00866A28   # Address indicating GAME mode
+cursor_pos_address = 0x005D0274  # Address for cursor position in EDITOR mode
 
 # Find the process with "pico8" in its name
 def find_process() -> psutil.Process:
@@ -97,6 +98,10 @@ while True:
         if mode != prev_mode:
             print(f'PICO-8 mode changed to: {mode.name}')
             prev_mode = mode
+        if mode == Mode.EDITOR:
+            cursor_bytes = read_process_memory(pid, cursor_pos_address, 4)
+            cursor_pos = int.from_bytes(cursor_bytes, byteorder='little')
+            print(f'Cursor position in EDITOR mode: {cursor_pos}')
         time.sleep(0.1)
     except Exception as e:
         print('Error reading process memory:', e)
