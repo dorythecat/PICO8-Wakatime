@@ -4,13 +4,13 @@ import psutil
 import wakatime
 
 # Find the process with "pico8" in its name
-def find_process() -> psutil.Process | None:
+def find_process() -> psutil.Process:
     for proc in psutil.process_iter():
         if "pico8" in proc.name():
             return proc
-    return None
+    raise RuntimeError("PICO-8 process not found.")
 
-
+'''
 def make_test_heartbeat(entity: str) -> dict:
     """Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread."""
     return {
@@ -23,7 +23,6 @@ def make_test_heartbeat(entity: str) -> dict:
         'project': { 'name': 'PICO-8 Test Project' },
         'folders': None
     }
-
 
 def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> None:
     """
@@ -76,7 +75,6 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         thread.join(timeout=10)
         print('Thread finished.')
 
-
 if __name__ == '__main__':
     # Prefer testing with pico8 process if found, otherwise use this file as the entity
     proc = None
@@ -95,3 +93,4 @@ if __name__ == '__main__':
 
     # By default do a dry-run. Change to dry_run=False and run_cli=True to actually invoke wakatime-cli.
     send_heartbeat(entity, dry_run=False, run_cli=True)
+'''
