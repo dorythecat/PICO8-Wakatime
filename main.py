@@ -89,12 +89,9 @@ if __name__ == '__main__':
         try:
             entity = proc.exe() or proc.cmdline()[0]
         except Exception as e:
-            print('Warning: could not get pico8 process executable:', e)
-            entity = __file__
-        print('Found pico8 process, using entity:', entity)
+            raise RuntimeError('Could not get PICO-8 process executable for testing.')
     else:
-        entity = __file__
-        print('No pico8 process found, using current file as entity:', entity)
+        raise RuntimeError('Could not get PICO-8 process executable for testing.')
 
     # By default do a dry-run. Change to dry_run=False and run_cli=True to actually invoke wakatime-cli.
     send_heartbeat(entity, dry_run=False, run_cli=True)
