@@ -3,6 +3,7 @@ import time
 import psutil
 import platform
 import wakatime
+from enum import Enum
 
 editor_mode_address = 0x0051D0C8 # Address indicating EDITOR mode
 game_mode_address = 0x00866A28   # Address indicating GAME mode
@@ -73,6 +74,13 @@ def read_process_memory(pid: int, address: int, size: int) -> bytes:
         except Exception as e:
             raise OSError(f'Could not read {mem_path} at {hex(address)}: {e}')
 
+class Mode(Enum):
+    CONSOLE = 0
+    EDITOR = 1
+    GAME = 2
+
+mode: Mode = Mode.CONSOLE
+prev_mode: Mode = Mode.CONSOLE
 
 while True:
     try:
@@ -81,11 +89,14 @@ while True:
         editor_mode_byte = read_process_memory(pid, editor_mode_address, 1)
         game_mode_byte = read_process_memory(pid, game_mode_address, 1)
         if editor_mode_byte == b'\x01':
-            print('PICO-8 is in EDITOR mode.')
+            mode = Mode.EDITOR
         elif game_mode_byte == b'\x01':
-            print('PICO-8 is in GAME mode.')
+            mode = Mode.GAME
         else:
-            print('PICO-8 is in CONSOLE mode.')
+            mode = Mode.CONSOLE
+        if mode != prev_mode:
+            print(f'PICO-8 mode changed to: {mode.name}')
+            prev_mode = mode
         time.sleep(0.1)
     except Exception as e:
         print('Error reading process memory:', e)
