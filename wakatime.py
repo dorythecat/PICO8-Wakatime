@@ -729,8 +729,9 @@ def download(url, filePath):
 
 def is_symlink(path):
     try:
-        return os.is_symlink(path)
-    except:
+        return os.path.islink(path)
+    except Exception as e:
+        log(DEBUG, e)
         return False
 
 
