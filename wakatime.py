@@ -1,10 +1,12 @@
-""" ==========================================================
-File:        WakaTime.py
+"""
+==========================================================
+File:        wakatime.py
 Description: Automatic time tracking for PICO 8 (0.2.6)
 Maintainer:  Dory
 License:     GNU Affero General Public License v3.0
-             (http://www.gnu.org/licenses/agpl-3.0.html)
-==========================================================="""
+             (https://www.gnu.org/licenses/agpl-3.0.html)
+===========================================================
+"""
 
 __version__ = '0.0.1'
 
