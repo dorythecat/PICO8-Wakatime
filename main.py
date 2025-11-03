@@ -5,7 +5,7 @@ import platform
 import wakatime
 from enum import Enum
 
-editor_mode_address = 0x0051D0C8 # Address indicating EDITOR mode
+editor_window_address = 0x0051D0C8 # Address indicating EDITOR sub-mode (0 if not editor)
 game_mode_address = 0x00866A28   # Address indicating GAME mode
 cursor_pos_address = 0x005D0274  # Address for cursor position in EDITOR mode
 
@@ -80,17 +80,33 @@ class Mode(Enum):
     EDITOR = 1
     GAME = 2
 
+class EditorMode(Enum):
+    NOT_EDITOR = 0
+    CODE = 1
+    SPRITES = 2
+    MAP = 3
+    SFX = 4
+    MUSIC = 5
+
 mode: Mode = Mode.CONSOLE
 prev_mode: Mode = Mode.CONSOLE
+
+editor_submode: EditorMode = EditorMode.CODE
+prev_editor_submode: EditorMode = EditorMode.CODE
 
 while True:
     try:
         proc = find_process()
         pid = proc.pid
-        editor_mode_byte = read_process_memory(pid, editor_mode_address, 1)
+        editor_window_byte = read_process_memory(pid, editor_window_address, 4)
+        editor_window = int.from_bytes(editor_window_byte, byteorder='little')
         game_mode_byte = read_process_memory(pid, game_mode_address, 1)
-        if editor_mode_byte == b'\x01':
+        if editor_window != 0:
             mode = Mode.EDITOR
+            editor_submode = EditorMode(editor_window)
+            if editor_submode != prev_editor_submode:
+                print(f'PICO-8 editor sub-mode changed to: {editor_submode.name}')
+                prev_editor_submode = editor_submode
         elif game_mode_byte == b'\x01':
             mode = Mode.GAME
         else:
@@ -98,7 +114,7 @@ while True:
         if mode != prev_mode:
             print(f'PICO-8 mode changed to: {mode.name}')
             prev_mode = mode
-        if mode == Mode.EDITOR:
+        if mode == Mode.EDITOR and editor_submode == EditorMode.CODE:
             cursor_bytes = read_process_memory(pid, cursor_pos_address, 4)
             cursor_pos = int.from_bytes(cursor_bytes, byteorder='little')
             print(f'Cursor position in EDITOR mode: {cursor_pos}')
