@@ -20,7 +20,7 @@ def make_test_heartbeat(entity: str) -> dict:
         'lineno': 1,
         'cursorpos': 1,
         'lines_in_file': 1,
-        'project': None,
+        'project': { 'name': 'Test Project' },
         'folders': None,
     }
 
@@ -43,8 +43,7 @@ def send_test_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False
         '--entity-type', 'app',
         '--time', str('%f' % built['timestamp']),
         '--plugin', 'PICO8-Wakatime/' + wakatime.__version__,
-        '--languague', 'PICO-8',
-        '--project', 'PICO-8 Project'
+        '--languague', 'PICO-8'
     ]
     api_key = thread.api_key
     if api_key:
