@@ -10,10 +10,6 @@ Website:     https://wakatime.com/
 
 __version__ = '11.1.1'
 
-
-import sublime
-import sublime_plugin
-
 import json
 import os
 import platform
