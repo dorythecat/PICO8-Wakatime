@@ -51,14 +51,13 @@ class Popen(subprocess.Popen):
 
 
 # globals
-ST_VERSION = int(sublime.version())
 HOME_FOLDER = os.path.realpath(os.environ.get('WAKATIME_HOME') or os.path.expanduser('~'))
 RESOURCES_FOLDER = os.path.join(HOME_FOLDER, '.wakatime')
 CONFIG_FILE = os.path.join(HOME_FOLDER, '.wakatime.cfg')
 INTERNAL_CONFIG_FILE = os.path.join(HOME_FOLDER, '.wakatime-internal.cfg')
 GITHUB_RELEASES_STABLE_URL = 'https://api.github.com/repos/wakatime/wakatime-cli/releases/latest'
 GITHUB_DOWNLOAD_PREFIX = 'https://github.com/wakatime/wakatime-cli/releases/download'
-SETTINGS_FILE = 'WakaTime.sublime-settings'
+SETTINGS_FILE = 'WakaTime.pico8-settings'
 SETTINGS = {}
 LAST_HEARTBEAT = {
     'time': 0,
@@ -83,10 +82,14 @@ WARNING = 'WARNING'
 ERROR = 'ERROR'
 
 
-def parseConfigFile(configFile):
-    """Returns a configparser.SafeConfigParser instance with configs
+def parseConfigFile(configFile: str) -> ConfigParser | None:
+    """
+    Returns a configparser.SafeConfigParser instance with configs
     read from the config file. Default location of the config file is
     at ~/.wakatime.cfg.
+
+    :param configFile: Absolute path to config file.
+    :return: ConfigParser instance or None if error occurs.
     """
 
     kwargs = {'strict': False}
@@ -421,67 +424,16 @@ class SendHeartbeatsThread(threading.Thread):
             process = Popen(cmd, stdin=stdin, stdout=PIPE, stderr=STDOUT)
             output, _err = process.communicate(input=inp)
             retcode = process.poll()
-            if (not retcode or retcode == 102 or retcode == 112) and not output:
-                self.sent()
-            else:
-                update_status_bar('Error')
             if retcode:
                 log(DEBUG if retcode == 102 or retcode == 112 else ERROR, f'wakatime-core exited with status: {retcode}')
             if output:
                 log(ERROR, f'wakatime-core output: {output}')
-        except:
-            log(ERROR, sys.exc_info()[1])
-            update_status_bar('Error')
-
-    def sent(self):
-        update_status_bar('OK')
-
-
-def plugin_loaded():
-    global SETTINGS
-    SETTINGS = sublime.load_settings(SETTINGS_FILE)
-
-    log(INFO, 'Initializing WakaTime plugin v%s' % __version__)
-    update_status_bar('Initializing...')
-
-    UpdateCLI().start()
-
-    after_loaded()
-
-
-def after_loaded():
-    if not prompt_api_key():
-        set_timeout(after_loaded, 0.5)
-    update_status_bar('OK')
-
-
-# need to call plugin_loaded because only ST3 will auto-call it
-if ST_VERSION < 3000:
-    plugin_loaded()
-
-
-class WakatimeListener(sublime_plugin.EventListener):
-
-    def on_post_save(self, view):
-        handle_activity(view, is_write=True)
-
-    def on_selection_modified(self, view):
-        if is_view_active(view):
-            handle_activity(view)
-
-    def on_modified(self, view):
-        if is_view_active(view):
-            handle_activity(view)
-
-
-class WakatimeDashboardCommand(sublime_plugin.ApplicationCommand):
-
-    def run(self):
-        webbrowser.open_new_tab('https://wakatime.com/dashboard')
-
+        except Exception as e:
+            log(ERROR, e)
 
 class UpdateCLI(threading.Thread):
-    """Non-blocking thread for downloading latest wakatime-cli from GitHub.
+    """
+    Non-blocking thread for downloading latest wakatime-cli from GitHub.
     """
 
     def run(self):
@@ -505,8 +457,8 @@ class UpdateCLI(threading.Thread):
             if isCliInstalled():
                 try:
                     os.remove(getCliLocation())
-                except:
-                    log(DEBUG, traceback.format_exc())
+                except Exception as e:
+                    log(DEBUG, e)
 
             log(INFO, 'Extracting wakatime-cli...')
             with ZipFile(zip_file) as zf:
@@ -517,10 +469,10 @@ class UpdateCLI(threading.Thread):
 
             try:
                 os.remove(os.path.join(RESOURCES_FOLDER, 'wakatime-cli.zip'))
-            except:
-                log(DEBUG, traceback.format_exc())
-        except:
-            log(DEBUG, traceback.format_exc())
+            except Exception as e:
+                log(DEBUG, e)
+        except Exception as e:
+            log(DEBUG, e)
 
         createSymlink()
 
@@ -682,7 +634,7 @@ def reportMissingPlatformSupport(osname, arch):
     request(url)
 
 
-def request(url, last_modified=None):
+def request(url: str, last_modified: str = None) -> tuple:
     req = Request(url)
     req.add_header('User-Agent', 'github.com/dorythecat/PICO8-Wakatime')
 
@@ -706,7 +658,7 @@ def request(url, last_modified=None):
         raise
 
 
-def download(url, filePath):
+def download(url: str, filePath: str) -> tuple[None, None, int] | None:
     req = Request(url)
     req.add_header('User-Agent', 'github.com/dorythecat/PICO8-Wakatime')
 
@@ -744,13 +696,14 @@ def createSymlink():
 
     try:
         os.symlink(getCliLocation(), link)
-    except:
+    except Exception as e:
+        log(WARNING, f'Could not create symlink: {e}')
         try:
             shutil.copy2(getCliLocation(), link)
             if not is_win:
                 os.chmod(link, 509)  # 755
-        except:
-            log(WARNING, traceback.format_exc())
+        except Exception as e:
+            log(WARNING, e)
 
 
 class SSLCertVerificationDisabled(object):
