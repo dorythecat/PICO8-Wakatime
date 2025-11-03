@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """ ==========================================================
 File:        WakaTime.py
-Description: Automatic time tracking for Sublime Text 2 and 3.
-Maintainer:  WakaTime <support@wakatime.com>
-License:     BSD, see LICENSE for more details.
-Website:     https://wakatime.com/
+Description: Automatic time tracking for PICO 8 (0.2.6)
+Maintainer:  Dory
+License:     GNU Affero General Public License v3.0
+             (http://www.gnu.org/licenses/agpl-3.0.html)
 ==========================================================="""
 
 
-__version__ = '11.1.1'
+__version__ = '0.0.1'
 
 import json
 import os
