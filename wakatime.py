@@ -164,24 +164,25 @@ class ApiKey(object):
         global SETTINGS
         self._key = key
         SETTINGS.set('api_key', str(key))
-        sublime.save_settings(SETTINGS_FILE)
+        # TODO: Svae settings
+        # sublime.save_settings(SETTINGS_FILE)
 
 
 APIKEY = ApiKey()
 
 
-def set_timeout(callback, seconds):
-    """Runs the callback after the given seconds delay.
-
-    If this is Sublime Text 3, runs the callback on an alternate thread. If this
-    is Sublime Text 2, runs the callback in the main thread.
+def set_timeout(callback: callable, seconds: float) -> None:
     """
+    Schedules callback to be called after seconds.
 
-    milliseconds = int(seconds * 1000)
-    try:
-        sublime.set_timeout_async(callback, milliseconds)
-    except AttributeError:
-        sublime.set_timeout(callback, milliseconds)
+    :param callback: The function to call after the timeout.
+    :param seconds: The number of seconds to wait before calling the callback.
+    :return: None
+    """
+    def run():
+        time.sleep(seconds)
+        callback()
+    threading.Thread(target=run).start()
 
 
 def log(lvl, message):
