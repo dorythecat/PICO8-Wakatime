@@ -196,7 +196,7 @@ def obfuscate_apikey(command_list):
     return cmd
 
 
-def enough_time_passed(now, is_write):
+def enough_time_passed(now: float, is_write: bool) -> bool:
     return now - LAST_HEARTBEAT['time'] > HEARTBEAT_FREQUENCY * 60 or (is_write and now - LAST_HEARTBEAT['time'] > 2)
 
 def find_folder_containing_file(folders: list, current_file: str) -> str | None:
@@ -234,7 +234,7 @@ def find_project_from_folders(folders: list, current_file: str) -> str | None:
     folder = find_folder_containing_file(folders, current_file)
     return os.path.basename(folder) if folder else None
 
-def handle_activity(view, is_write=False):
+def handle_activity(view, is_write: bool = False) -> None:
     window = view.window()
     if window is not None:
         entity = view.file_name()
@@ -246,7 +246,12 @@ def handle_activity(view, is_write=False):
                 folders = window.folders()
                 append_heartbeat(entity, timestamp, is_write, view, project, folders)
 
-def append_heartbeat(entity, timestamp, is_write, view, project, folders):
+def append_heartbeat(entity: str,
+                     timestamp: float,
+                     is_write: bool,
+                     view,
+                     project: dict | None = None,
+                     folders: list | None = None) -> None:
     global LAST_HEARTBEAT
 
     # add this heartbeat to queue
@@ -276,7 +281,7 @@ def append_heartbeat(entity, timestamp, is_write, view, project, folders):
     # process the queue of heartbeats in the future
     set_timeout(lambda: process_queue(timestamp), SEND_BUFFER_SECONDS)
 
-def process_queue(timestamp):
+def process_queue(timestamp: float) -> None:
     global LAST_HEARTBEAT_SENT_AT
 
     if not isCliInstalled():
@@ -312,7 +317,7 @@ class SendHeartbeatsThread(threading.Thread):
     Non-blocking thread for sending heartbeats to api.
     """
 
-    def __init__(self, heartbeat):
+    def __init__(self, heartbeat: dict) -> None:
         threading.Thread.__init__(self)
 
         self.extra_heartbeats = None
@@ -326,19 +331,38 @@ class SendHeartbeatsThread(threading.Thread):
         self.heartbeat = heartbeat
         self.has_extra_heartbeats = False
 
-    def add_extra_heartbeats(self, extra_heartbeats):
+    def add_extra_heartbeats(self, extra_heartbeats: list) -> None:
         self.has_extra_heartbeats = True
         self.extra_heartbeats = extra_heartbeats
 
-    def run(self):
-        """Running in background thread."""
-
+    def run(self) -> None:
+        """
+        Running in background thread.
+        """
         self.send_heartbeats()
 
-    def build_heartbeat(self, entity=None, timestamp=None, is_write=None,
-                        lineno=None, cursorpos=None, lines_in_file=None,
-                        project=None, folders=None):
-        """Returns a dict for passing to wakatime-cli as arguments."""
+    def build_heartbeat(self,
+                        entity: str,
+                        timestamp: float,
+                        is_write: bool,
+                        lineno: int | None = None,
+                        cursorpos: int | None = None,
+                        lines_in_file: int | None = None,
+                        project: dict | None = None,
+                        folders: list | None = None) -> dict:
+        """
+        Returns a dict for passing to wakatime-cli as arguments.
+
+        :param entity: Absolute path to file.
+        :param timestamp: Timestamp of heartbeat.
+        :param is_write: True if heartbeat is for write event.
+        :param lineno: Line number of cursor in file.
+        :param cursorpos: Column number of cursor in file.
+        :param lines_in_file: Total number of lines in file.
+        :param project: Project data from editor.
+        :param folders: List of open folders in editor.
+        :return: Dict representing heartbeat.
+        """
 
         heartbeat = {
             'entity': entity,
@@ -359,17 +383,15 @@ class SendHeartbeatsThread(threading.Thread):
             heartbeat['cursorpos'] = cursorpos
         if lines_in_file is not None:
             heartbeat['lines'] = lines_in_file
-
         return heartbeat
 
-    def send_heartbeats(self):
+    def send_heartbeats(self) -> None:
         heartbeat = self.build_heartbeat(**self.heartbeat)
-        ua = 'sublime/%d sublime-wakatime/%s' % (ST_VERSION, __version__)
         cmd = [
             getCliLocation(),
             '--entity', heartbeat['entity'],
             '--time', str('%f' % heartbeat['timestamp']),
-            '--plugin', ua,
+            '--plugin', 'PICO8-Wakatime/' + __version__,
         ]
         if self.api_key:
             cmd.extend(['--key', str(bytes.decode(self.api_key.encode('utf8')))])
@@ -419,7 +441,7 @@ class UpdateCLI(threading.Thread):
     Non-blocking thread for downloading latest wakatime-cli from GitHub.
     """
 
-    def run(self):
+    def run(self) -> None:
         if isCliLatest():
             return
 
@@ -461,7 +483,7 @@ class UpdateCLI(threading.Thread):
 
         log(INFO, 'Finished extracting wakatime-cli.')
 
-def getCliLocation():
+def getCliLocation() -> str:
     global WAKATIME_CLI_LOCATION
 
     if not WAKATIME_CLI_LOCATION:
@@ -469,7 +491,7 @@ def getCliLocation():
         WAKATIME_CLI_LOCATION = os.path.join(RESOURCES_FOLDER, binary)
     return WAKATIME_CLI_LOCATION
 
-def architecture():
+def architecture() -> str:
     arch = platform.machine() or platform.processor()
     if arch == 'armv7l':
         return 'arm'
@@ -479,10 +501,10 @@ def architecture():
         return 'arm64' if sys.maxsize > 2**32 else 'arm'
     return 'amd64' if sys.maxsize > 2**32 else '386'
 
-def isCliInstalled():
+def isCliInstalled() -> bool:
     return os.path.exists(getCliLocation())
 
-def isCliLatest():
+def isCliLatest() -> bool:
     if not isCliInstalled():
         return False
 
@@ -513,7 +535,7 @@ def isCliLatest():
     log(INFO, f'Found an updated wakatime-cli {remoteVer}')
     return False
 
-def getLatestCliVersion():
+def getLatestCliVersion() -> str | None:
     global LATEST_CLI_VERSION
 
     if LATEST_CLI_VERSION:
@@ -524,8 +546,8 @@ def getLatestCliVersion():
         configs = parseConfigFile(INTERNAL_CONFIG_FILE)
         if configs:
             last_modified, last_version = lastModifiedAndVersion(configs)
-    except:
-        log(DEBUG, traceback.format_exc())
+    except Exception as e:
+        log(DEBUG, e)
 
     try:
         headers, contents, code = request(GITHUB_RELEASES_STABLE_URL, last_modified=last_modified)
@@ -554,9 +576,9 @@ def getLatestCliVersion():
         return ver
     except Exception as e:
         log(DEBUG, e)
-        return None
+    return None
 
-def lastModifiedAndVersion(configs):
+def lastModifiedAndVersion(configs) -> tuple[str | None, str | None]:
     last_modified, last_version = None, None
     if configs.has_option('internal', 'cli_version'):
         last_version = configs.get('internal', 'cli_version')
@@ -566,49 +588,33 @@ def lastModifiedAndVersion(configs):
         return last_modified, last_version
     return None, None
 
-def extractVersion(text):
+def extractVersion(text: str) -> str | None:
     pattern = re.compile(r"([0-9]+\.[0-9]+\.[0-9]+)")
     match = pattern.search(text)
     return f'v{match.group(1)}' if match else None
 
-def cliDownloadUrl():
+def cliDownloadUrl() -> str:
     osname = platform.system().lower()
     arch = architecture()
 
     validCombinations = [
-      'darwin-amd64',
-      'darwin-arm64',
-      'freebsd-386',
-      'freebsd-amd64',
-      'freebsd-arm',
-      'linux-386',
-      'linux-amd64',
-      'linux-arm',
-      'linux-arm64',
-      'netbsd-386',
-      'netbsd-amd64',
-      'netbsd-arm',
-      'openbsd-386',
-      'openbsd-amd64',
-      'openbsd-arm',
-      'openbsd-arm64',
-      'windows-386',
-      'windows-amd64',
-      'windows-arm64',
+      'darwin-amd64', 'darwin-arm64',
+      'freebsd-386', 'freebsd-amd64', 'freebsd-arm',
+      'linux-386', 'linux-amd64', 'linux-arm', 'linux-arm64',
+      'netbsd-386', 'netbsd-amd64', 'netbsd-arm',
+      'openbsd-386', 'openbsd-amd64', 'openbsd-arm', 'openbsd-arm64',
+      'windows-386', 'windows-amd64', 'windows-arm64',
     ]
     check = f'{osname}-{arch}'
     if check not in validCombinations:
         reportMissingPlatformSupport(osname, arch)
+    return f'{GITHUB_DOWNLOAD_PREFIX}/{getLatestCliVersion()}/wakatime-cli-{osname}-{arch}.zip'
 
-    version = getLatestCliVersion()
-
-    return f'{GITHUB_DOWNLOAD_PREFIX}/{version}/wakatime-cli-{osname}-{arch}.zip'
-
-def reportMissingPlatformSupport(osname, arch):
+def reportMissingPlatformSupport(osname: str, arch: str) -> None:
     url = f'https://api.wakatime.com/api/v1/cli-missing?osname={osname}&architecture={arch}&plugin=pico8'
     request(url)
 
-def request(url: str, last_modified: str = None) -> tuple:
+def request(url: str, last_modified: str = None) -> tuple[dict | None, bytes | None, int]:
     req = Request(url)
     req.add_header('User-Agent', 'github.com/dorythecat/PICO8-Wakatime')
 
@@ -630,6 +636,7 @@ def request(url: str, last_modified: str = None) -> tuple:
         raise
     except IOError:
         raise
+    return None, None, None
 
 def download(url: str, filePath: str) -> tuple[None, None, int] | None:
     req = Request(url)
@@ -651,14 +658,14 @@ def download(url: str, filePath: str) -> tuple[None, None, int] | None:
         except IOError:
             raise
 
-def is_symlink(path):
+def is_symlink(path: str) -> bool:
     try:
         return os.path.islink(path)
     except Exception as e:
         log(DEBUG, e)
-        return False
+    return False
 
-def createSymlink():
+def createSymlink() -> None:
     link = os.path.join(RESOURCES_FOLDER, 'wakatime-cli')
     if is_win:
         link = link + '.exe'
