@@ -636,7 +636,6 @@ def request(url: str, last_modified: str = None) -> tuple[dict | None, bytes | N
         raise
     except IOError:
         raise
-    return None, None, None
 
 def download(url: str, filePath: str) -> tuple[None, None, int] | None:
     req = Request(url)
