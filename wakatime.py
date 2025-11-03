@@ -191,103 +191,6 @@ def log(lvl, message):
     msg = message
     print(f'[WakaTime] [{lvl}] {msg}')
 
-
-def update_status_bar(status=None, debounced=False, msg=None):
-    """Updates the status bar."""
-    global LAST_FETCH_TODAY_CODING_TIME, FETCH_TODAY_DEBOUNCE_COUNTER
-
-    try:
-        if not msg and SETTINGS.get('status_bar_message') is not False and SETTINGS.get('status_bar_enabled'):
-            if SETTINGS.get('status_bar_coding_activity') and status == 'OK':
-                if debounced:
-                    FETCH_TODAY_DEBOUNCE_COUNTER -= 1
-                if debounced or not LAST_FETCH_TODAY_CODING_TIME:
-                    now = int(time.time())
-                    if LAST_FETCH_TODAY_CODING_TIME and (FETCH_TODAY_DEBOUNCE_COUNTER > 0 or LAST_FETCH_TODAY_CODING_TIME > now - FETCH_TODAY_DEBOUNCE_SECONDS):
-                        return
-                    LAST_FETCH_TODAY_CODING_TIME = now
-                    FetchStatusBarCodingTime().start()
-                    return
-                else:
-                    FETCH_TODAY_DEBOUNCE_COUNTER += 1
-                    set_timeout(lambda: update_status_bar(status, debounced=True), FETCH_TODAY_DEBOUNCE_SECONDS)
-                    return
-            else:
-                msg = f'WakaTime: {status}'
-
-        if msg:
-            active_window = sublime.active_window()
-            if active_window:
-                for view in active_window.views():
-                    view.set_status('wakatime', msg)
-
-    except RuntimeError:
-        set_timeout(lambda: update_status_bar(status=status, debounced=debounced, msg=msg), 0)
-
-
-class FetchStatusBarCodingTime(threading.Thread):
-
-    def __init__(self):
-        threading.Thread.__init__(self)
-
-        self.debug = SETTINGS.get('debug')
-        self.api_key = APIKEY.read() or ''
-        self.proxy = SETTINGS.get('proxy')
-
-    def run(self):
-        if not self.api_key:
-            log(DEBUG, 'Missing WakaTime API key.')
-            return
-        if not isCliInstalled():
-            return
-
-        ua = 'sublime/%d sublime-wakatime/%s' % (ST_VERSION, __version__)
-
-        cmd = [
-            getCliLocation(),
-            '--today',
-            '--key', str(bytes.decode(self.api_key.encode('utf8'))),
-            '--plugin', ua,
-        ]
-        if self.debug:
-            cmd.append('--verbose')
-        if self.proxy:
-            cmd.extend(['--proxy', self.proxy])
-
-        log(DEBUG, ' '.join(obfuscate_apikey(cmd)))
-        try:
-            process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-            output, err = process.communicate()
-            if output:
-                output = output.strip()
-            retcode = process.poll()
-            if not retcode and output:
-                msg = f'Today: {output}'
-                update_status_bar(msg=msg)
-            else:
-                log(DEBUG, f'wakatime-core today exited with status: {retcode}')
-                if output:
-                    log(DEBUG, f'wakatime-core today output: {output}')
-        except:
-            pass
-
-
-def prompt_api_key():
-    if APIKEY.read():
-        return True
-
-    window = sublime.active_window()
-    if window:
-        def got_key(text):
-            if text:
-                APIKEY.write(text)
-        window.show_input_panel('[WakaTime] Enter your wakatime.com api key:', '', got_key, None, None)
-        return True
-    else:
-        log(ERROR, 'Could not prompt for api key because no window found.')
-        return False
-
-
 def obfuscate_apikey(command_list):
     cmd = list(command_list)
     apikey_index = None
@@ -325,27 +228,20 @@ def find_folder_containing_file(folders, current_file):
         if not current_folder or os.path.dirname(current_folder) == current_folder:
             break
         current_folder = os.path.dirname(current_folder)
-
     return parent_folder
 
 
-def find_project_from_folders(folders, current_file):
-    """Find project name from open folders.
+def find_project_from_folders(folders: list, current_file: str) -> str | None:
+    """
+    Find project name from open folders.
+
+    :param folders: List of absolute paths to open folders.
+    :param current_file: Absolute path to current file.
+    :return: Project name or None if not found.
     """
 
     folder = find_folder_containing_file(folders, current_file)
     return os.path.basename(folder) if folder else None
-
-
-def is_view_active(view):
-    if view:
-        active_window = sublime.active_window()
-        if active_window:
-            active_view = active_window.active_view()
-            if active_view:
-                return active_view.buffer_id() == view.buffer_id()
-    return False
-
 
 def handle_activity(view, is_write=False):
     window = view.window()
