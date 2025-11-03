@@ -159,7 +159,7 @@ class ApiKey(object):
     def write(self, key):
         global SETTINGS
         self._key = key
-        SETTINGS.set('api_key', str(key))
+        SETTINGS['api_key'] = key
         # TODO: Svae settings
         # sublime.save_settings(SETTINGS_FILE)
 
