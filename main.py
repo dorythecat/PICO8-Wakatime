@@ -11,21 +11,29 @@ cursor_pos_address = 0x005D0274  # Address for cursor position in EDITOR mode
 
 # Find the process with "pico8" in its name
 def find_process() -> psutil.Process:
+    """
+    Attempts to find the PICO-8 process by name.
+
+    :return: psutil.Process object for PICO-8.
+    :raises RuntimeError: If PICO-8 process is not found.
+    """
     for proc in psutil.process_iter():
         if "pico8" in proc.name():
             return proc
     raise RuntimeError("PICO-8 process not found.")
 
 def read_process_memory(pid: int, address: int, size: int) -> bytes:
-    """Read `size` bytes from `address` in process `pid`.
+    """
+    Read `size` bytes from `address` in process `pid`.
 
     On Windows uses ReadProcessMemory via ctypes. On Unix tries /proc/<pid>/mem (may require root or ptrace).
-    Raises OSError on failure.
 
     :param pid: Process ID to read from.
     :param address: Memory address to read.
     :param size: Number of bytes to read.
     :return: Bytes read from the process memory.
+    :raises OSError: If reading fails.
+    :raises NotImplementedError: If platform is unsupported.
     """
     system = platform.system()
     if system == 'Windows':
@@ -65,15 +73,16 @@ def read_process_memory(pid: int, address: int, size: int) -> bytes:
             return bytes(bytearray(buf))[:bytesRead.value]
         finally:
             CloseHandle(hProcess)
-    else:
+    elif system in ('Linux', 'Darwin'):
         # Attempt to read from /proc/<pid>/mem (Linux/Unix). This may require root or ptrace permissions.
-        mem_path = f'/proc/{pid}/mem'
         try:
-            with open(mem_path, 'rb') as fh:
+            with open(f'/proc/{pid}/mem', 'rb') as fh:
                 fh.seek(address)
                 return fh.read(size)
         except Exception as e:
-            raise OSError(f'Could not read {mem_path} at {hex(address)}: {e}')
+            raise OSError(f'Could not read /proc/{pid}/mem at {hex(address)}: {e}')
+    else:
+        raise NotImplementedError(f'Unsupported platform: {system}')
 
 class Mode(Enum):
     CONSOLE = 0
@@ -121,7 +130,7 @@ while True:
         time.sleep(0.1)
     except Exception as e:
         print('Error reading process memory:', e)
-        time.sleep(2)
+        raise
 '''
 def make_test_heartbeat(entity: str) -> dict:
     """Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread."""
