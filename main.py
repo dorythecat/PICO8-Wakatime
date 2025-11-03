@@ -20,17 +20,17 @@ def make_test_heartbeat(entity: str) -> dict:
         'lineno': 1,
         'cursorpos': 1,
         'lines_in_file': 1,
-        'project': { 'name': 'Test Project' },
-        'folders': None,
+        'project': { 'name': 'PICO-8 Test Project' },
+        'folders': None
     }
 
 
-def send_test_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> None:
+def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> None:
     """
     Create a SendHeartbeatsThread and either print the command (dry_run)
     or start the thread to actually invoke wakatime-cli (if installed).
     """
-    hb = make_test_heartbeat(entity)
+    hb = make_test_heartbeat(entity) # TODO: Make actual heartbeat data
     thread = wakatime.SendHeartbeatsThread(hb)
 
     # Build the heartbeat the same way the thread will
@@ -97,4 +97,4 @@ if __name__ == '__main__':
         print('No pico8 process found, using current file as entity:', entity)
 
     # By default do a dry-run. Change to dry_run=False and run_cli=True to actually invoke wakatime-cli.
-    send_test_heartbeat(entity, dry_run=False, run_cli=True)
+    send_heartbeat(entity, dry_run=False, run_cli=True)
