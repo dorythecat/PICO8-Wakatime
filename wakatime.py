@@ -211,12 +211,16 @@ def enough_time_passed(now, is_write):
     return False
 
 
-def find_folder_containing_file(folders, current_file):
-    """Returns absolute path to folder containing the file.
+def find_folder_containing_file(folders: list, current_file: str) -> str | None:
+    """
+    Returns absolute path to folder containing the file.
+
+    :param folders: List of absolute paths to open folders.
+    :param current_file: Absolute path to current file.
+    :return: Absolute path to folder containing the file, or None if not found.
     """
 
     parent_folder = None
-
     current_folder = current_file
     while True:
         for folder in folders:
