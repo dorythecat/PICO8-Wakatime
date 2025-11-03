@@ -31,31 +31,10 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
 
-if (sys.version_info[0] != 3): # Only Python 3 supported
-    raise Exception('Unsupported Python version: {0}.{1}.{2}'.format(
-        sys.version_info[0],
-        sys.version_info[1],
-        sys.version_info[2],
-    ))
+if sys.version_info[0] != 3: # Only Python 3 supported
+    raise Exception(f'Unsupported Python version: {sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}')
 
 is_win = platform.system() == 'Windows'
-
-def u(text):
-    if text is None:
-        return None
-    if isinstance(text, bytes):
-        try:
-            return text.decode('utf-8')
-        except:
-            try:
-                return text.decode(sys.getdefaultencoding())
-            except:
-                pass
-    try:
-        return str(text)
-    except:
-        return text.decode('utf-8', 'replace')
-
 
 class Popen(subprocess.Popen):
     """Patched Popen to prevent opening cmd window on Windows platform."""
@@ -122,7 +101,7 @@ def parseConfigFile(configFile):
                 log(ERROR, traceback.format_exc())
                 return None
     except IOError:
-        log(DEBUG, "Error: Could not read from config file {0}\n".format(configFile))
+        log(DEBUG, f'Error: Could not read from config file {configFile}\n')
         return configs
 
 
@@ -174,7 +153,7 @@ class ApiKey(object):
             stdout, stderr = process.communicate()
             retcode = process.poll()
             if retcode:
-                log(ERROR, 'Vault command error ({retcode}): {stderr}'.format(retcode=retcode, stderr=u(stderr)))
+                log(ERROR, f'Vault command error ({retcode}): {stderr}')
                 return None
             return stdout.strip() or None
         except:
@@ -206,21 +185,11 @@ def set_timeout(callback, seconds):
         sublime.set_timeout(callback, milliseconds)
 
 
-def log(lvl, message, *args, **kwargs):
-    try:
-        if lvl == DEBUG and not SETTINGS.get('debug'):
-            return
-        msg = message
-        if len(args) > 0:
-            msg = message.format(*args)
-        elif len(kwargs) > 0:
-            msg = message.format(**kwargs)
-        try:
-            print('[WakaTime] [{lvl}] {msg}'.format(lvl=lvl, msg=msg))
-        except UnicodeDecodeError:
-            print(u('[WakaTime] [{lvl}] {msg}').format(lvl=lvl, msg=u(msg)))
-    except RuntimeError:
-        set_timeout(lambda: log(lvl, message, *args, **kwargs), 0)
+def log(lvl, message):
+    if lvl == DEBUG and not SETTINGS.get('debug'):
+        return
+    msg = message
+    print(f'[WakaTime] [{lvl}] {msg}')
 
 
 def update_status_bar(status=None, debounced=False, msg=None):
@@ -244,7 +213,7 @@ def update_status_bar(status=None, debounced=False, msg=None):
                     set_timeout(lambda: update_status_bar(status, debounced=True), FETCH_TODAY_DEBOUNCE_SECONDS)
                     return
             else:
-                msg = 'WakaTime: {status}'.format(status=status)
+                msg = f'WakaTime: {status}'
 
         if msg:
             active_window = sublime.active_window()
@@ -289,17 +258,16 @@ class FetchStatusBarCodingTime(threading.Thread):
         try:
             process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
             output, err = process.communicate()
-            output = u(output)
             if output:
                 output = output.strip()
             retcode = process.poll()
             if not retcode and output:
-                msg = 'Today: {output}'.format(output=output)
+                msg = f'Today: {output}'
                 update_status_bar(msg=msg)
             else:
-                log(DEBUG, 'wakatime-core today exited with status: {0}'.format(retcode))
+                log(DEBUG, f'wakatime-core today exited with status: {retcode}')
                 if output:
-                    log(DEBUG, u('wakatime-core today output: {0}').format(output))
+                    log(DEBUG, f'wakatime-core today output: {output}')
         except:
             pass
 
@@ -524,11 +492,11 @@ class SendHeartbeatsThread(threading.Thread):
         if heartbeat.get('alternate_project'):
             cmd.extend(['--alternate-project', heartbeat['alternate_project']])
         if heartbeat.get('lineno') is not None:
-            cmd.extend(['--lineno', '{0}'.format(heartbeat['lineno'])])
+            cmd.extend(['--lineno', f'{heartbeat['lineno']}'])
         if heartbeat.get('cursorpos') is not None:
-            cmd.extend(['--cursorpos', '{0}'.format(heartbeat['cursorpos'])])
+            cmd.extend(['--cursorpos', f'{heartbeat['cursorpos']}'])
         if heartbeat.get('lines') is not None:
-            cmd.extend(['--lines-in-file', '{0}'.format(heartbeat['lines'])])
+            cmd.extend(['--lines-in-file', f'{heartbeat['lines']}'])
         for pattern in self.ignore:
             cmd.extend(['--exclude', pattern])
         for pattern in self.include:
@@ -543,9 +511,8 @@ class SendHeartbeatsThread(threading.Thread):
             cmd.append('--extra-heartbeats')
             stdin = PIPE
             extra_heartbeats = json.dumps([self.build_heartbeat(**x) for x in self.extra_heartbeats])
-            inp = "{0}\n".format(extra_heartbeats).encode('utf-8')
+            inp = f'{extra_heartbeats}\n'
         else:
-            extra_heartbeats = None
             stdin = None
             inp = None
 
@@ -559,11 +526,11 @@ class SendHeartbeatsThread(threading.Thread):
             else:
                 update_status_bar('Error')
             if retcode:
-                log(DEBUG if retcode == 102 or retcode == 112 else ERROR, 'wakatime-core exited with status: {0}'.format(retcode))
+                log(DEBUG if retcode == 102 or retcode == 112 else ERROR, f'wakatime-core exited with status: {retcode}')
             if output:
-                log(ERROR, u('wakatime-core output: {0}').format(output))
+                log(ERROR, f'wakatime-core output: {output}')
         except:
-            log(ERROR, u(sys.exc_info()[1]))
+            log(ERROR, sys.exc_info()[1])
             update_status_bar('Error')
 
     def sent(self):
@@ -631,7 +598,7 @@ class UpdateCLI(threading.Thread):
 
         try:
             url = cliDownloadUrl()
-            log(DEBUG, 'Downloading wakatime-cli from {url}'.format(url=url))
+            log(DEBUG, f'Downloading wakatime-cli from {url}')
             zip_file = os.path.join(RESOURCES_FOLDER, 'wakatime-cli.zip')
             download(url, zip_file)
 
@@ -664,13 +631,8 @@ def getCliLocation():
     global WAKATIME_CLI_LOCATION
 
     if not WAKATIME_CLI_LOCATION:
-        binary = 'wakatime-cli-{osname}-{arch}{ext}'.format(
-            osname=platform.system().lower(),
-            arch=architecture(),
-            ext='.exe' if is_win else '',
-        )
+        binary = f'wakatime-cli-{platform.system().lower()}-{architecture()}' + ('.exe' if is_win else '')
         WAKATIME_CLI_LOCATION = os.path.join(RESOURCES_FOLDER, binary)
-
     return WAKATIME_CLI_LOCATION
 
 
@@ -704,7 +666,7 @@ def isCliLatest():
         log(DEBUG, 'Local wakatime-cli version not found.')
         return False
 
-    log(INFO, 'Current wakatime-cli version is %s' % localVer)
+    log(INFO, f'Current wakatime-cli version is {localVer}')
     log(INFO, 'Checking for updates to wakatime-cli...')
 
     remoteVer = getLatestCliVersion()
@@ -716,7 +678,7 @@ def isCliLatest():
         log(INFO, 'wakatime-cli is up to date.')
         return True
 
-    log(INFO, 'Found an updated wakatime-cli %s' % remoteVer)
+    log(INFO, f'Found an updated wakatime-cli {remoteVer}')
     return False
 
 
@@ -737,7 +699,7 @@ def getLatestCliVersion():
     try:
         headers, contents, code = request(GITHUB_RELEASES_STABLE_URL, last_modified=last_modified)
 
-        log(DEBUG, 'GitHub API Response {0}'.format(code))
+        log(DEBUG, f'GitHub API Response {code}')
 
         if code == 304:
             LATEST_CLI_VERSION = last_version
@@ -746,7 +708,7 @@ def getLatestCliVersion():
         data = json.loads(contents.decode('utf-8'))
 
         ver = data['tag_name']
-        log(DEBUG, 'Latest wakatime-cli version from GitHub: {0}'.format(ver))
+        log(DEBUG, f'Latest wakatime-cli version from GitHub: {ver}')
 
         if configs:
             last_modified = headers.get('Last-Modified')
@@ -778,9 +740,7 @@ def lastModifiedAndVersion(configs):
 def extractVersion(text):
     pattern = re.compile(r"([0-9]+\.[0-9]+\.[0-9]+)")
     match = pattern.search(text)
-    if match:
-        return 'v{ver}'.format(ver=match.group(1))
-    return None
+    return f'v{match.group(1)}' if match else None
 
 
 def cliDownloadUrl():
@@ -808,31 +768,23 @@ def cliDownloadUrl():
       'windows-amd64',
       'windows-arm64',
     ]
-    check = '{osname}-{arch}'.format(osname=osname, arch=arch)
+    check = f'{osname}-{arch}'
     if check not in validCombinations:
         reportMissingPlatformSupport(osname, arch)
 
     version = getLatestCliVersion()
 
-    return '{prefix}/{version}/wakatime-cli-{osname}-{arch}.zip'.format(
-        prefix=GITHUB_DOWNLOAD_PREFIX,
-        version=version,
-        osname=osname,
-        arch=arch,
-    )
+    return f'{GITHUB_DOWNLOAD_PREFIX}/{version}/wakatime-cli-{osname}-{arch}.zip'
 
 
 def reportMissingPlatformSupport(osname, arch):
-    url = 'https://api.wakatime.com/api/v1/cli-missing?osname={osname}&architecture={arch}&plugin=sublime'.format(
-        osname=osname,
-        arch=arch,
-    )
+    url = f'https://api.wakatime.com/api/v1/cli-missing?osname={osname}&architecture={arch}&plugin=pico8'
     request(url)
 
 
 def request(url, last_modified=None):
     req = Request(url)
-    req.add_header('User-Agent', 'github.com/wakatime/sublime-wakatime')
+    req.add_header('User-Agent', 'github.com/dorythecat/PICO8-Wakatime')
 
     proxy = SETTINGS.get('proxy')
     if proxy:
@@ -856,7 +808,7 @@ def request(url, last_modified=None):
 
 def download(url, filePath):
     req = Request(url)
-    req.add_header('User-Agent', 'github.com/wakatime/sublime-wakatime')
+    req.add_header('User-Agent', 'github.com/dorythecat/PICO8-Wakatime')
 
     proxy = SETTINGS.get('proxy')
     if proxy:
