@@ -6,7 +6,6 @@ License:     GNU Affero General Public License v3.0
              (http://www.gnu.org/licenses/agpl-3.0.html)
 ==========================================================="""
 
-
 __version__ = '0.0.1'
 
 import json
@@ -20,23 +19,21 @@ import sys
 import time
 import threading
 import traceback
-import webbrowser
+import queue
 from subprocess import STDOUT, PIPE
 from zipfile import ZipFile
-
-import queue
 from configparser import ConfigParser, Error as ConfigParserError
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
-
 if sys.version_info[0] != 3: # Only Python 3 supported
     raise Exception(f'Unsupported Python version: {sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}')
-
 is_win = platform.system() == 'Windows'
 
 class Popen(subprocess.Popen):
-    """Patched Popen to prevent opening cmd window on Windows platform."""
+    """
+    Patched Popen to prevent opening cmd window on Windows platform.
+    """
 
     def __init__(self, *args, **kwargs):
         if is_win:
@@ -48,7 +45,6 @@ class Popen(subprocess.Popen):
                 pass
             kwargs['startupinfo'] = startupinfo
         super(Popen, self).__init__(*args, **kwargs)
-
 
 # globals
 HOME_FOLDER = os.path.realpath(os.environ.get('WAKATIME_HOME') or os.path.expanduser('~'))
@@ -74,13 +70,11 @@ HEARTBEATS = queue.Queue()
 HEARTBEAT_FREQUENCY = 2  # minutes between logging heartbeat when editing same file
 SEND_BUFFER_SECONDS = 30  # seconds between sending buffered heartbeats to API
 
-
 # Log Levels
 DEBUG = 'DEBUG'
 INFO = 'INFO'
 WARNING = 'WARNING'
 ERROR = 'ERROR'
-
 
 def parseConfigFile(configFile: str) -> ConfigParser | None:
     """
@@ -106,7 +100,6 @@ def parseConfigFile(configFile: str) -> ConfigParser | None:
         log(DEBUG, f'Error: Could not read from config file {configFile}\n')
         return configs
 
-
 class ApiKey(object):
     _key = None
 
@@ -128,14 +121,13 @@ class ApiKey(object):
                     if key:
                         self._key = key
                         return self._key
-        except:
+        except Exception as e:
+            log(ERROR, e)
             pass
 
         key = self.api_key_from_vault_cmd(configs)
         if key:
             self._key = key
-            return self._key
-
         return self._key
 
     def api_key_from_vault_cmd(self, configs):
@@ -144,7 +136,8 @@ class ApiKey(object):
             try:
                 if configs.has_option('settings', 'api_key_vault_cmd'):
                     vault_cmd = configs.get('settings', 'api_key_vault_cmd')
-            except:
+            except Exception as e:
+                log(ERROR, e)
                 pass
 
         if not vault_cmd or not vault_cmd.strip():
@@ -158,8 +151,8 @@ class ApiKey(object):
                 log(ERROR, f'Vault command error ({retcode}): {stderr}')
                 return None
             return stdout.strip() or None
-        except:
-            log(ERROR, traceback.format_exc())
+        except Exception as e:
+            log(ERROR, e)
 
         return None
 
@@ -170,9 +163,7 @@ class ApiKey(object):
         # TODO: Svae settings
         # sublime.save_settings(SETTINGS_FILE)
 
-
 APIKEY = ApiKey()
-
 
 def set_timeout(callback: callable, seconds: float) -> None:
     """
@@ -186,7 +177,6 @@ def set_timeout(callback: callable, seconds: float) -> None:
         time.sleep(seconds)
         callback()
     threading.Thread(target=run).start()
-
 
 def log(lvl, message):
     if lvl == DEBUG and not SETTINGS.get('debug'):
@@ -207,12 +197,7 @@ def obfuscate_apikey(command_list):
 
 
 def enough_time_passed(now, is_write):
-    if now - LAST_HEARTBEAT['time'] > HEARTBEAT_FREQUENCY * 60:
-        return True
-    if is_write and now - LAST_HEARTBEAT['time'] > 2:
-        return True
-    return False
-
+    return now - LAST_HEARTBEAT['time'] > HEARTBEAT_FREQUENCY * 60 or (is_write and now - LAST_HEARTBEAT['time'] > 2)
 
 def find_folder_containing_file(folders: list, current_file: str) -> str | None:
     """
@@ -237,7 +222,6 @@ def find_folder_containing_file(folders: list, current_file: str) -> str | None:
         current_folder = os.path.dirname(current_folder)
     return parent_folder
 
-
 def find_project_from_folders(folders: list, current_file: str) -> str | None:
     """
     Find project name from open folders.
@@ -261,7 +245,6 @@ def handle_activity(view, is_write=False):
                 project = window.project_data() if hasattr(window, 'project_data') else None
                 folders = window.folders()
                 append_heartbeat(entity, timestamp, is_write, view, project, folders)
-
 
 def append_heartbeat(entity, timestamp, is_write, view, project, folders):
     global LAST_HEARTBEAT
@@ -292,7 +275,6 @@ def append_heartbeat(entity, timestamp, is_write, view, project, folders):
 
     # process the queue of heartbeats in the future
     set_timeout(lambda: process_queue(timestamp), SEND_BUFFER_SECONDS)
-
 
 def process_queue(timestamp):
     global LAST_HEARTBEAT_SENT_AT
@@ -325,14 +307,15 @@ def process_queue(timestamp):
         thread.add_extra_heartbeats(extra_heartbeats)
     thread.start()
 
-
 class SendHeartbeatsThread(threading.Thread):
-    """Non-blocking thread for sending heartbeats to api.
+    """
+    Non-blocking thread for sending heartbeats to api.
     """
 
     def __init__(self, heartbeat):
         threading.Thread.__init__(self)
 
+        self.extra_heartbeats = None
         self.debug = SETTINGS.get('debug')
         self.api_key = APIKEY.read() or ''
         self.ignore = SETTINGS.get('ignore', [])
@@ -478,7 +461,6 @@ class UpdateCLI(threading.Thread):
 
         log(INFO, 'Finished extracting wakatime-cli.')
 
-
 def getCliLocation():
     global WAKATIME_CLI_LOCATION
 
@@ -486,7 +468,6 @@ def getCliLocation():
         binary = f'wakatime-cli-{platform.system().lower()}-{architecture()}' + ('.exe' if is_win else '')
         WAKATIME_CLI_LOCATION = os.path.join(RESOURCES_FOLDER, binary)
     return WAKATIME_CLI_LOCATION
-
 
 def architecture():
     arch = platform.machine() or platform.processor()
@@ -498,10 +479,8 @@ def architecture():
         return 'arm64' if sys.maxsize > 2**32 else 'arm'
     return 'amd64' if sys.maxsize > 2**32 else '386'
 
-
 def isCliInstalled():
     return os.path.exists(getCliLocation())
-
 
 def isCliLatest():
     if not isCliInstalled():
@@ -510,7 +489,8 @@ def isCliLatest():
     args = [getCliLocation(), '--version']
     try:
         stdout, stderr = Popen(args, stdout=PIPE, stderr=PIPE).communicate()
-    except:
+    except Exception as e:
+        log(DEBUG, e)
         return False
     stdout = (stdout or b'') + (stderr or b'')
     localVer = extractVersion(stdout.decode('utf-8'))
@@ -532,7 +512,6 @@ def isCliLatest():
 
     log(INFO, f'Found an updated wakatime-cli {remoteVer}')
     return False
-
 
 def getLatestCliVersion():
     global LATEST_CLI_VERSION
@@ -573,10 +552,9 @@ def getLatestCliVersion():
 
         LATEST_CLI_VERSION = ver
         return ver
-    except:
-        log(DEBUG, traceback.format_exc())
+    except Exception as e:
+        log(DEBUG, e)
         return None
-
 
 def lastModifiedAndVersion(configs):
     last_modified, last_version = None, None
@@ -588,12 +566,10 @@ def lastModifiedAndVersion(configs):
         return last_modified, last_version
     return None, None
 
-
 def extractVersion(text):
     pattern = re.compile(r"([0-9]+\.[0-9]+\.[0-9]+)")
     match = pattern.search(text)
     return f'v{match.group(1)}' if match else None
-
 
 def cliDownloadUrl():
     osname = platform.system().lower()
@@ -628,11 +604,9 @@ def cliDownloadUrl():
 
     return f'{GITHUB_DOWNLOAD_PREFIX}/{version}/wakatime-cli-{osname}-{arch}.zip'
 
-
 def reportMissingPlatformSupport(osname, arch):
     url = f'https://api.wakatime.com/api/v1/cli-missing?osname={osname}&architecture={arch}&plugin=pico8'
     request(url)
-
 
 def request(url: str, last_modified: str = None) -> tuple:
     req = Request(url)
@@ -657,7 +631,6 @@ def request(url: str, last_modified: str = None) -> tuple:
     except IOError:
         raise
 
-
 def download(url: str, filePath: str) -> tuple[None, None, int] | None:
     req = Request(url)
     req.add_header('User-Agent', 'github.com/dorythecat/PICO8-Wakatime')
@@ -678,14 +651,12 @@ def download(url: str, filePath: str) -> tuple[None, None, int] | None:
         except IOError:
             raise
 
-
 def is_symlink(path):
     try:
         return os.path.islink(path)
     except Exception as e:
         log(DEBUG, e)
         return False
-
 
 def createSymlink():
     link = os.path.join(RESOURCES_FOLDER, 'wakatime-cli')
@@ -704,7 +675,6 @@ def createSymlink():
                 os.chmod(link, 509)  # 755
         except Exception as e:
             log(WARNING, e)
-
 
 class SSLCertVerificationDisabled(object):
     def __enter__(self):
