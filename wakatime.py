@@ -25,77 +25,36 @@ import webbrowser
 from subprocess import STDOUT, PIPE
 from zipfile import ZipFile
 
-try:
-    import Queue as queue  # py2
-except ImportError:
-    import queue  # py3
-
-try:
-    from ConfigParser import SafeConfigParser as ConfigParser
-    from ConfigParser import Error as ConfigParserError
-except ImportError:
-    from configparser import ConfigParser, Error as ConfigParserError
-try:
-    from urllib2 import Request, urlopen, HTTPError
-except ImportError:
-    from urllib.request import Request, urlopen
-    from urllib.error import HTTPError
+import queue
+from configparser import ConfigParser, Error as ConfigParserError
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 
-is_py2 = (sys.version_info[0] == 2)
-is_py3 = (sys.version_info[0] == 3)
+if (sys.version_info[0] != 3): # Only Python 3 supported
+    raise Exception('Unsupported Python version: {0}.{1}.{2}'.format(
+        sys.version_info[0],
+        sys.version_info[1],
+        sys.version_info[2],
+    ))
+
 is_win = platform.system() == 'Windows'
 
-
-if is_py2:
-    import codecs
-    open = codecs.open
-
-    def u(text):
-        if text is None:
-            return None
-        if isinstance(text, unicode):  # noqa: F821
-            return text
+def u(text):
+    if text is None:
+        return None
+    if isinstance(text, bytes):
         try:
             return text.decode('utf-8')
         except:
             try:
                 return text.decode(sys.getdefaultencoding())
             except:
-                try:
-                    return unicode(text)  # noqa: F821
-                except:
-                    try:
-                        return text.decode('utf-8', 'replace')
-                    except:
-                        try:
-                            return unicode(str(text))  # noqa: F821
-                        except:
-                            return unicode('')  # noqa: F821
-
-elif is_py3:
-    def u(text):
-        if text is None:
-            return None
-        if isinstance(text, bytes):
-            try:
-                return text.decode('utf-8')
-            except:
-                try:
-                    return text.decode(sys.getdefaultencoding())
-                except:
-                    pass
-        try:
-            return str(text)
-        except:
-            return text.decode('utf-8', 'replace')
-
-else:
-    raise Exception('Unsupported Python version: {0}.{1}.{2}'.format(
-        sys.version_info[0],
-        sys.version_info[1],
-        sys.version_info[2],
-    ))
+                pass
+    try:
+        return str(text)
+    except:
+        return text.decode('utf-8', 'replace')
 
 
 class Popen(subprocess.Popen):
@@ -152,15 +111,12 @@ def parseConfigFile(configFile):
     at ~/.wakatime.cfg.
     """
 
-    kwargs = {} if is_py2 else {'strict': False}
+    kwargs = {'strict': False}
     configs = ConfigParser(**kwargs)
     try:
         with open(configFile, 'r', encoding='utf-8') as fh:
             try:
-                if is_py2:
-                    configs.readfp(fh)
-                else:
-                    configs.read_file(fh)
+                configs.read_file(fh)
                 return configs
             except ConfigParserError:
                 log(ERROR, traceback.format_exc())
@@ -887,41 +843,14 @@ def request(url, last_modified=None):
 
     try:
         resp = urlopen(req)
-        headers = dict(resp.getheaders()) if is_py2 else resp.headers
+        headers = resp.headers
         return headers, resp.read(), resp.getcode()
     except HTTPError as err:
         if err.code == 304:
             return None, None, 304
-        if is_py2:
-            with SSLCertVerificationDisabled():
-                try:
-                    resp = urlopen(req)
-                    headers = dict(resp.getheaders()) if is_py2 else resp.headers
-                    return headers, resp.read(), resp.getcode()
-                except HTTPError as err2:
-                    if err2.code == 304:
-                        return None, None, 304
-                    log(DEBUG, err.read().decode())
-                    log(DEBUG, err2.read().decode())
-                    raise
-                except IOError:
-                    raise
         log(DEBUG, err.read().decode())
         raise
     except IOError:
-        if is_py2:
-            with SSLCertVerificationDisabled():
-                try:
-                    resp = urlopen(url)
-                    headers = dict(resp.getheaders()) if is_py2 else resp.headers
-                    return headers, resp.read(), resp.getcode()
-                except HTTPError as err:
-                    if err.code == 304:
-                        return None, None, 304
-                    log(DEBUG, err.read().decode())
-                    raise
-                except IOError:
-                    raise
         raise
 
 
@@ -940,32 +869,9 @@ def download(url, filePath):
         except HTTPError as err:
             if err.code == 304:
                 return None, None, 304
-            if is_py2:
-                with SSLCertVerificationDisabled():
-                    try:
-                        resp = urlopen(req)
-                        fh.write(resp.read())
-                        return
-                    except HTTPError as err2:
-                        log(DEBUG, err.read().decode())
-                        log(DEBUG, err2.read().decode())
-                        raise
-                    except IOError:
-                        raise
             log(DEBUG, err.read().decode())
             raise
         except IOError:
-            if is_py2:
-                with SSLCertVerificationDisabled():
-                    try:
-                        resp = urlopen(url)
-                        fh.write(resp.read())
-                        return
-                    except HTTPError as err:
-                        log(DEBUG, err.read().decode())
-                        raise
-                    except IOError:
-                        raise
             raise
 
 
@@ -995,7 +901,6 @@ def createSymlink():
 
 
 class SSLCertVerificationDisabled(object):
-
     def __enter__(self):
         self.original_context = ssl._create_default_https_context
         ssl._create_default_https_context = ssl._create_unverified_context
