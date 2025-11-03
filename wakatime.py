@@ -10,17 +10,7 @@ License:     GNU Affero General Public License v3.0
 
 __version__ = '0.0.1'
 
-import json
-import os
-import platform
-import re
-import shutil
-import ssl
-import subprocess
-import sys
-import time
-import threading
-import queue
+import os, platform, sys, time, subprocess, threading, queue, shutil, ssl, re, json
 from subprocess import STDOUT, PIPE
 from zipfile import ZipFile
 from configparser import ConfigParser
