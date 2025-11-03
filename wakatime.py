@@ -18,11 +18,10 @@ import subprocess
 import sys
 import time
 import threading
-import traceback
 import queue
 from subprocess import STDOUT, PIPE
 from zipfile import ZipFile
-from configparser import ConfigParser, Error as ConfigParserError
+from configparser import ConfigParser
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
@@ -93,8 +92,8 @@ def parseConfigFile(configFile: str) -> ConfigParser | None:
             try:
                 configs.read_file(fh)
                 return configs
-            except ConfigParserError:
-                log(ERROR, traceback.format_exc())
+            except Exception as e:
+                log(ERROR, e)
                 return None
     except IOError:
         log(DEBUG, f'Error: Could not read from config file {configFile}\n')
