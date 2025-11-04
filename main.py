@@ -10,7 +10,7 @@ editor_window_address = 0x0051D0C8 # Address indicating EDITOR sub-mode (0 if no
 game_mode_address = 0x00866A28     # Address indicating GAME mode
 cursor_pos_address = 0x005D0274    # Address for cursor position in EDITOR mode
 file_size_address = 0x005D0264     # Address for file size in EDITOR mode, in characters
-#filename_address = 0x02E1F9A8      # Address for filename string in EDITOR mode
+filename_address = 0x005574B2      # Address for filename string in EDITOR mode
 code_address = 0x10480F30          # Address where code section starts in memory
 
 # HELPER ENUMS
@@ -152,8 +152,8 @@ def extract_filename(pid: int) -> str:
     """
     # Read filename string (assumed max length 256 bytes)
     raw_bytes = read_process_memory(pid, filename_address, 256)
-    # Find terminator
-    terminator = raw_bytes.find(b'\x20')
+    # Find terminator (.p8)
+    terminator = raw_bytes.find(b'.p8\x00')
     if terminator != -1:
         raw_bytes = raw_bytes[:terminator]
     else:
@@ -256,10 +256,10 @@ while True:
     try:
         proc = find_process()
         pid = proc.pid
-        #filename = extract_filename(pid)
-        #if filename != last_filename:
-        #    print(f'Loaded file: {filename}')
-        #    last_filename = filename
+        filename = extract_filename(pid)
+        if filename != last_filename:
+            print(f'Loaded file: {filename}')
+            last_filename = filename
         code = read_code(pid)
         if code != last_code:
             print(code)
