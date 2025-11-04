@@ -178,6 +178,22 @@ def read_code(pid: int) -> str:
         raise ValueError('Could not find string terminator for code section.')
     return raw_bytes.decode('utf-8', errors='ignore')
 
+def get_line_from_pos(code: str, cursor_pos: int) -> int:
+    """
+    Get the line of code at the given cursor position.
+
+    :param code: The full code string.
+    :param cursor_pos: The cursor position in characters.
+    :return: The line of code at the cursor position.
+    """
+    lines = code.splitlines(keepends=True)
+    current_pos = 0
+    for i, line in enumerate(lines):
+        current_pos += len(line)
+        if current_pos >= cursor_pos:
+            return i + 1  # Line numbers start at 1
+    return len(lines)
+
 def make_heartbeat(entity: str) -> dict:
     """
     Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.
@@ -250,7 +266,7 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         print('Thread finished.')
 
 code: str = ''
-last_code: str = ''
+edited_line: int = -1
 
 while True:
     try:
@@ -260,10 +276,6 @@ while True:
         if filename != last_filename:
             print(f'Loaded file: {filename}')
             last_filename = filename
-        code = read_code(pid)
-        if code != last_code:
-            print(code)
-            last_code = code
         editor_window = read_process_memory_int(pid, editor_window_address)
         if editor_window > 0:
             mode = Mode.EDITOR
@@ -276,6 +288,11 @@ while True:
                 if file_size != last_file_size:
                     print(f'File size changed to: {file_size} characters')
                     last_file_size = file_size
+
+                    code = read_code(pid) # Only need to read code when file size changes
+                    edited_line = get_line_from_pos(code, cursor_pos)
+                    if edited_line != -1:
+                        print(f'Code edited at line: {edited_line}')
         elif read_process_memory_bool(pid, game_mode_address):
             mode = Mode.GAME
         else:
