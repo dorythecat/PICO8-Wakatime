@@ -2,6 +2,9 @@ import os
 import time
 
 import wakatime
+import pico8_utils as pico8
+
+p8: pico8.Pico8 = pico8.Pico8()
 
 def make_heartbeat(entity: str) -> dict:
     """
@@ -10,16 +13,16 @@ def make_heartbeat(entity: str) -> dict:
     :param entity: The entity (file path or app name) for the heartbeat.
     :return: A dictionary representing the heartbeat.
     """
-    global edited_line, cursor_pos, file_size, filename
+    p8.update()
 
     return {
         'entity': os.path.abspath(entity),
         'timestamp': time.time(),
         'is_write': False, # TODO: Determine if the file was modified
-        'lineno': edited_line,
-        'cursorpos': cursor_pos,
-        'lines_in_file': file_size,
-        'project': { 'name': filename },
+        'lineno': p8.edited_line,
+        'cursorpos': p8.cursor_pos,
+        'lines_in_file': p8.file_size,
+        'project': { 'name': p8.filename },
         'folders': None
     }
 
