@@ -116,6 +116,7 @@ def extract_filename(pid: int) -> str:
     :param pid: Process ID to read from.
     :return: Filename string read from the process memory.
     :raises OSError: If reading fails.
+    :raises ValueError: If string terminator is not found.
     """
     # Read filename string (assumed max length 256 bytes)
     raw_bytes = read_process_memory(pid, filename_address, 256)
@@ -123,6 +124,8 @@ def extract_filename(pid: int) -> str:
     terminator = raw_bytes.find(b'\x20')
     if terminator != -1:
         raw_bytes = raw_bytes[:terminator]
+    else:
+        raise ValueError('Could not find string terminator for filename.')
     return raw_bytes.decode('utf-8', errors='ignore')
 
 class Mode(Enum):
@@ -162,7 +165,7 @@ while True:
             print(f'Loaded file: {filename}')
             last_filename = filename
         editor_window = read_process_memory_int(pid, editor_window_address)
-        if editor_window != 0:
+        if editor_window > 0:
             mode = Mode.EDITOR
             editor_submode = EditorMode(editor_window)
             if editor_submode != prev_editor_submode:
