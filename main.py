@@ -6,8 +6,9 @@ import wakatime
 from enum import Enum
 
 editor_window_address = 0x0051D0C8 # Address indicating EDITOR sub-mode (0 if not editor)
-game_mode_address = 0x00866A28   # Address indicating GAME mode
-cursor_pos_address = 0x005D0274  # Address for cursor position in EDITOR mode
+game_mode_address = 0x00866A28     # Address indicating GAME mode
+cursor_pos_address = 0x005D0274    # Address for cursor position in EDITOR mode
+file_size_address = 0x005D0264     # Address for file size in EDITOR mode, in characters
 
 # Find the process with "pico8" in its name
 def find_process() -> psutil.Process:
@@ -103,6 +104,12 @@ prev_mode: Mode = Mode.CONSOLE
 editor_submode: EditorMode = EditorMode.CODE
 prev_editor_submode: EditorMode = EditorMode.CODE
 
+cursor_pos: int = -1
+last_cursor_pos: int = -1
+
+file_size: int = -1
+last_file_size: int = -1
+
 while True:
     try:
         proc = find_process()
@@ -116,6 +123,12 @@ while True:
             if editor_submode != prev_editor_submode:
                 print(f'PICO-8 editor sub-mode changed to: {editor_submode.name}')
                 prev_editor_submode = editor_submode
+            if editor_submode == EditorMode.CODE:
+                file_size_bytes = read_process_memory(pid, file_size_address, 4)
+                file_size = int.from_bytes(file_size_bytes, byteorder='little')
+                if file_size != last_file_size:
+                    print(f'File size changed to: {file_size} characters')
+                    last_file_size = file_size
         elif game_mode_byte == b'\x01':
             mode = Mode.GAME
         else:
@@ -126,7 +139,9 @@ while True:
         if mode == Mode.EDITOR and editor_submode == EditorMode.CODE:
             cursor_bytes = read_process_memory(pid, cursor_pos_address, 4)
             cursor_pos = int.from_bytes(cursor_bytes, byteorder='little')
-            print(f'Cursor position in EDITOR mode: {cursor_pos}')
+            if cursor_pos != last_cursor_pos:
+                print(f'Cursor position changed to: {cursor_pos}' + (' (EOF)' if cursor_pos == file_size else ''))
+                last_cursor_pos = cursor_pos
         time.sleep(0.1)
     except Exception as e:
         print('Error reading process memory:', e)
