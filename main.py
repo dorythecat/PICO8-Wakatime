@@ -85,6 +85,29 @@ def read_process_memory(pid: int, address: int, size: int) -> bytes:
     else:
         raise NotImplementedError(f'Unsupported platform: {system}')
 
+def read_process_memory_bool(pid: int, address: int) -> bool:
+    """
+    Read a boolean (1 byte) from `address` in process `pid`.
+
+    :param pid: Process ID to read from.
+    :param address: Memory address to read.
+    :return: Boolean value read from the process memory.
+    :raises OSError: If reading fails.
+    """
+    return read_process_memory(pid, address, 1) != b'\x00'
+
+def read_process_memory_int(pid: int, address: int, size: int = 4) -> int:
+    """
+    Read an integer of `size` bytes from `address` in process `pid`.
+
+    :param pid: Process ID to read from.
+    :param address: Memory address to read.
+    :param size: Number of bytes to read. (Defaults to 4 for a 32-bit integer)
+    :return: Integer value read from the process memory.
+    :raises OSError: If reading fails.
+    """
+    return int.from_bytes(read_process_memory(pid, address, size), byteorder='little')
+
 class Mode(Enum):
     CONSOLE = 0
     EDITOR = 1
@@ -114,9 +137,7 @@ while True:
     try:
         proc = find_process()
         pid = proc.pid
-        editor_window_byte = read_process_memory(pid, editor_window_address, 4)
-        editor_window = int.from_bytes(editor_window_byte, byteorder='little')
-        game_mode_byte = read_process_memory(pid, game_mode_address, 1)
+        editor_window = read_process_memory_int(pid, editor_window_address)
         if editor_window != 0:
             mode = Mode.EDITOR
             editor_submode = EditorMode(editor_window)
@@ -124,12 +145,11 @@ while True:
                 print(f'PICO-8 editor sub-mode changed to: {editor_submode.name}')
                 prev_editor_submode = editor_submode
             if editor_submode == EditorMode.CODE:
-                file_size_bytes = read_process_memory(pid, file_size_address, 4)
-                file_size = int.from_bytes(file_size_bytes, byteorder='little')
+                file_size = read_process_memory_int(pid, file_size_address)
                 if file_size != last_file_size:
                     print(f'File size changed to: {file_size} characters')
                     last_file_size = file_size
-        elif game_mode_byte == b'\x01':
+        elif read_process_memory_bool(pid, game_mode_address):
             mode = Mode.GAME
         else:
             mode = Mode.CONSOLE
@@ -137,8 +157,7 @@ while True:
             print(f'PICO-8 mode changed to: {mode.name}')
             prev_mode = mode
         if mode == Mode.EDITOR and editor_submode == EditorMode.CODE:
-            cursor_bytes = read_process_memory(pid, cursor_pos_address, 4)
-            cursor_pos = int.from_bytes(cursor_bytes, byteorder='little')
+            cursor_pos = read_process_memory_int(pid, cursor_pos_address)
             if cursor_pos != last_cursor_pos:
                 print(f'Cursor position changed to: {cursor_pos}' + (' (EOF)' if cursor_pos == file_size else ''))
                 last_cursor_pos = cursor_pos
