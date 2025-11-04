@@ -5,11 +5,42 @@ import platform
 import wakatime
 from enum import Enum
 
+# CONSTANTS
 editor_window_address = 0x0051D0C8 # Address indicating EDITOR sub-mode (0 if not editor)
 game_mode_address = 0x00866A28     # Address indicating GAME mode
 cursor_pos_address = 0x005D0274    # Address for cursor position in EDITOR mode
 file_size_address = 0x005D0264     # Address for file size in EDITOR mode, in characters
 filename_address = 0x02E1F9A8      # Address for filename string in EDITOR mode
+
+# HELPER ENUMS
+class Mode(Enum):
+    CONSOLE = 0
+    EDITOR = 1
+    GAME = 2
+
+class EditorMode(Enum):
+    NOT_EDITOR = 0
+    CODE = 1
+    SPRITES = 2
+    MAP = 3
+    SFX = 4
+    MUSIC = 5
+
+# GLOBAL VARIABLES
+mode: Mode = Mode.CONSOLE
+prev_mode: Mode = Mode.CONSOLE
+
+editor_submode: EditorMode = EditorMode.CODE
+prev_editor_submode: EditorMode = EditorMode.CODE
+
+cursor_pos: int = -1
+last_cursor_pos: int = -1
+
+file_size: int = -1
+last_file_size: int = -1
+
+filename: str = ''
+last_filename: str = ''
 
 # Find the process with "pico8" in its name
 def find_process() -> psutil.Process:
@@ -196,34 +227,6 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         thread.start()
         thread.join(timeout=10)
         print('Thread finished.')
-
-class Mode(Enum):
-    CONSOLE = 0
-    EDITOR = 1
-    GAME = 2
-
-class EditorMode(Enum):
-    NOT_EDITOR = 0
-    CODE = 1
-    SPRITES = 2
-    MAP = 3
-    SFX = 4
-    MUSIC = 5
-
-mode: Mode = Mode.CONSOLE
-prev_mode: Mode = Mode.CONSOLE
-
-editor_submode: EditorMode = EditorMode.CODE
-prev_editor_submode: EditorMode = EditorMode.CODE
-
-cursor_pos: int = -1
-last_cursor_pos: int = -1
-
-file_size: int = -1
-last_file_size: int = -1
-
-filename: str = ''
-last_filename: str = ''
 
 while True:
     try:
