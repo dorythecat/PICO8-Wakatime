@@ -43,6 +43,9 @@ last_file_size: int = -1
 filename: str = ''
 last_filename: str = ''
 
+code: str = ''
+edited_line: int = -1
+
 # Find the process with "pico8" in its name
 def find_process() -> psutil.Process:
     """
@@ -201,16 +204,16 @@ def make_heartbeat(entity: str) -> dict:
     :param entity: The entity (file path or app name) for the heartbeat.
     :return: A dictionary representing the heartbeat.
     """
-    global cursor_pos, file_size, filename
+    global edited_line, cursor_pos, file_size, filename
 
     return {
         'entity': os.path.abspath(entity),
         'timestamp': time.time(),
         'is_write': False, # TODO: Determine if the file was modified
-        'lineno': 0, # TODO: Find a way to get the current line number in PICO-8 editor
+        'lineno': edited_line,
         'cursorpos': cursor_pos,
         'lines_in_file': file_size,
-        'project': { 'name': filename[:-3] }, # Remove .P8 extension for project name
+        'project': { 'name': filename },
         'folders': None
     }
 
@@ -264,9 +267,6 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         thread.start()
         thread.join(timeout=10)
         print('Thread finished.')
-
-code: str = ''
-edited_line: int = -1
 
 while True:
     try:
