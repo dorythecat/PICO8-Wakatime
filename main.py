@@ -165,20 +165,25 @@ while True:
     except Exception as e:
         print('Error reading process memory:', e)
         raise
-'''
-def make_test_heartbeat(entity: str) -> dict:
-    """Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread."""
+
+def make_heartbeat(entity: str) -> dict:
+    """
+    Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.
+
+    :param entity: The entity (file path or app name) for the heartbeat.
+    :return: A dictionary representing the heartbeat.
+    """
     return {
         'entity': os.path.abspath(entity),
         'timestamp': time.time(),
-        'is_write': False,
-        'lineno': 1,
-        'cursorpos': 1,
-        'lines_in_file': 1,
+        'is_write': False, # TODO: Determine if the file was modified
+        'lineno': 0, # TODO: Find a way to get the current line number in PICO-8 editor
+        'cursorpos': cursor_pos,
+        'lines_in_file': file_size,
         'project': { 'name': 'PICO-8 Test Project' },
         'folders': None
     }
-
+'''
 def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> None:
     """
     Create a SendHeartbeatsThread and either print the command (dry_run)
