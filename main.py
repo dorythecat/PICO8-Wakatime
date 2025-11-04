@@ -166,6 +166,8 @@ def make_heartbeat(entity: str) -> dict:
     :param entity: The entity (file path or app name) for the heartbeat.
     :return: A dictionary representing the heartbeat.
     """
+    global cursor_pos, file_size, filename
+
     return {
         'entity': os.path.abspath(entity),
         'timestamp': time.time(),
@@ -173,7 +175,7 @@ def make_heartbeat(entity: str) -> dict:
         'lineno': 0, # TODO: Find a way to get the current line number in PICO-8 editor
         'cursorpos': cursor_pos,
         'lines_in_file': file_size,
-        'project': { 'name': 'PICO-8 Test Project' },
+        'project': { 'name': filename[:-3] }, # Remove .P8 extension for project name
         'folders': None
     }
 
