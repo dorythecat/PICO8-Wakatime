@@ -10,7 +10,8 @@ editor_window_address = 0x0051D0C8 # Address indicating EDITOR sub-mode (0 if no
 game_mode_address = 0x00866A28     # Address indicating GAME mode
 cursor_pos_address = 0x005D0274    # Address for cursor position in EDITOR mode
 file_size_address = 0x005D0264     # Address for file size in EDITOR mode, in characters
-filename_address = 0x02E1F9A8      # Address for filename string in EDITOR mode
+#filename_address = 0x02E1F9A8      # Address for filename string in EDITOR mode
+code_address = 0x10480F30          # Address where code section starts in memory
 
 # HELPER ENUMS
 class Mode(Enum):
@@ -159,6 +160,24 @@ def extract_filename(pid: int) -> str:
         raise ValueError('Could not find string terminator for filename.')
     return raw_bytes.decode('utf-8', errors='ignore')
 
+def read_code(pid: int) -> str:
+    """
+    Extract the code section from the PICO-8 process memory.
+
+    :param pid: Process ID to read from.
+    :return: Code string read from the process memory.
+    :raises OSError: If reading fails.
+    :raises ValueError: If string terminator is not found.
+    """
+    code_size = read_process_memory_int(pid, file_size_address) + 128  # Just to be safe
+    raw_bytes = read_process_memory(pid, code_address, code_size)
+    terminator = raw_bytes.find(b'\x00\x00')
+    if terminator != -1:
+        raw_bytes = raw_bytes[:terminator]
+    else:
+        raise ValueError('Could not find string terminator for code section.')
+    return raw_bytes.decode('utf-8', errors='ignore')
+
 def make_heartbeat(entity: str) -> dict:
     """
     Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.
@@ -230,14 +249,21 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         thread.join(timeout=10)
         print('Thread finished.')
 
+code: str = ''
+last_code: str = ''
+
 while True:
     try:
         proc = find_process()
         pid = proc.pid
-        filename = extract_filename(pid)
-        if filename != last_filename:
-            print(f'Loaded file: {filename}')
-            last_filename = filename
+        #filename = extract_filename(pid)
+        #if filename != last_filename:
+        #    print(f'Loaded file: {filename}')
+        #    last_filename = filename
+        code = read_code(pid)
+        if code != last_code:
+            print(code)
+            last_code = code
         editor_window = read_process_memory_int(pid, editor_window_address)
         if editor_window > 0:
             mode = Mode.EDITOR
