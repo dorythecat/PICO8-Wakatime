@@ -9,6 +9,7 @@ editor_window_address = 0x0051D0C8 # Address indicating EDITOR sub-mode (0 if no
 game_mode_address = 0x00866A28     # Address indicating GAME mode
 cursor_pos_address = 0x005D0274    # Address for cursor position in EDITOR mode
 file_size_address = 0x005D0264     # Address for file size in EDITOR mode, in characters
+filename_address = 0x02E1F9A8      # Address for filename string in EDITOR mode
 
 # Find the process with "pico8" in its name
 def find_process() -> psutil.Process:
@@ -108,6 +109,22 @@ def read_process_memory_int(pid: int, address: int, size: int = 4) -> int:
     """
     return int.from_bytes(read_process_memory(pid, address, size), byteorder='little')
 
+def extract_filename(pid: int) -> str:
+    """
+    Extract the code section from the PICO-8 process memory.
+
+    :param pid: Process ID to read from.
+    :return: Filename string read from the process memory.
+    :raises OSError: If reading fails.
+    """
+    # Read filename string (assumed max length 256 bytes)
+    raw_bytes = read_process_memory(pid, filename_address, 256)
+    # Find terminator
+    terminator = raw_bytes.find(b'\x20')
+    if terminator != -1:
+        raw_bytes = raw_bytes[:terminator]
+    return raw_bytes.decode('utf-8', errors='ignore')
+
 class Mode(Enum):
     CONSOLE = 0
     EDITOR = 1
@@ -133,10 +150,17 @@ last_cursor_pos: int = -1
 file_size: int = -1
 last_file_size: int = -1
 
+filename: str = ''
+last_filename: str = ''
+
 while True:
     try:
         proc = find_process()
         pid = proc.pid
+        filename = extract_filename(pid)
+        if filename != last_filename:
+            print(f'Loaded file: {filename}')
+            last_filename = filename
         editor_window = read_process_memory_int(pid, editor_window_address)
         if editor_window != 0:
             mode = Mode.EDITOR
