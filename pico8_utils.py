@@ -41,22 +41,18 @@ class Pico8:
     process: psutil.Process = None
 
     mode: Mode = Mode.CONSOLE
-    prev_mode: Mode = Mode.CONSOLE
-
     editor_submode: EditorMode = EditorMode.CODE
-    prev_editor_submode: EditorMode = EditorMode.CODE
-
     cursor_pos: int = -1
-    last_cursor_pos: int = -1
-
     file_size: int = -1
-    last_file_size: int = -1
-
     filename: str = ''
-    last_filename: str = ''
-
-    code: str = ''
     edited_line: int = -1
+
+    _prev_mode: Mode = Mode.CONSOLE
+    _prev_editor_submode: EditorMode = EditorMode.CODE
+    _last_cursor_pos: int = -1
+    _last_file_size: int = -1
+    _last_filename: str = ''
+    _code: str = ''
 
     def __init__(self):
         """
@@ -163,7 +159,7 @@ class Pico8:
         :raises ValueError: If string terminator is not found.
         """
         # Read filename string (assumed max length 256 bytes)
-        raw_bytes = self.read_process_memory(filename_address, 256)
+        raw_bytes = self.read_memory(filename_address, 256)
         # Find terminator (.p8)
         terminator = raw_bytes.find(b'.p8\x00')
         if terminator != -1:
@@ -189,8 +185,8 @@ class Pico8:
             raw_bytes = raw_bytes[:terminator]
         else:
             raise ValueError('Could not find string terminator for code section.')
-        self.code = raw_bytes.decode('utf-8', errors='ignore')
-        return self.code
+        self._code = raw_bytes.decode('utf-8', errors='ignore')
+        return self._code
 
     def get_line_from_pos(self) -> int:
         """
@@ -200,10 +196,51 @@ class Pico8:
         :param cursor_pos: The cursor position in characters.
         :return: The line of code at the cursor position.
         """
-        lines = self.code.splitlines(keepends=True)
+        lines = self._code.splitlines(keepends=True)
         current_pos = 0
         for i, line in enumerate(lines):
             current_pos += len(line)
             if current_pos >= self.cursor_pos:
                 return i + 1  # Line numbers start at 1
         return len(lines)
+
+    def update(self):
+        """
+        Update the PICO-8 state by reading memory and detecting changes.
+        """
+        try:
+            self.read_filename()
+            if self.filename != self._last_filename:
+                print(f'Loaded file: {self.filename}')
+                self._last_filename = self.filename
+
+            editor_window = self.read_int(editor_window_address)
+            if editor_window > 0:
+                self.mode = Mode.EDITOR
+                self.editor_submode = EditorMode(editor_window)
+                if self.editor_submode != self._prev_editor_submode:
+                    print(f'PICO-8 editor sub-mode changed to: {self.editor_submode.name}')
+                    self._prev_editor_submode = self.editor_submode
+
+                if self.editor_submode == EditorMode.CODE:
+                    self.file_size = self.read_int(file_size_address)
+                    if self.file_size != self._last_file_size:
+                        print(f'File size changed to: {self.file_size} characters')
+                        self._last_file_size = self.file_size
+
+                        self.read_code()  # Only need to read code when file size changes
+                        self.cursor_pos = self.read_int(cursor_pos_address)
+                        self.edited_line = self.get_line_from_pos()
+                        if self.edited_line != -1:
+                            print(f'Code edited at line: {self.edited_line}')
+            elif self.read_bool(game_mode_address):
+                self.mode = Mode.GAME
+            else:
+                self.mode = Mode.CONSOLE
+
+            if self.mode != self._prev_mode:
+                print(f'PICO-8 mode changed to: {self.mode.name}')
+                self.prev_mode = self.mode
+        except Exception as e:
+            print(f'Error updating PICO-8 state: {e}')
+            raise

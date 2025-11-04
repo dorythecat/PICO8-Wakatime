@@ -3,7 +3,6 @@ import time
 
 import wakatime
 
-'''
 def make_heartbeat(entity: str) -> dict:
     """
     Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.
@@ -74,44 +73,3 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         thread.start()
         thread.join(timeout=10)
         print('Thread finished.')
-
-while True:
-    try:
-        filename = extract_filename(pid)
-        if filename != last_filename:
-            print(f'Loaded file: {filename}')
-            last_filename = filename
-        editor_window = read_process_memory_int(pid, editor_window_address)
-        if editor_window > 0:
-            mode = Mode.EDITOR
-            editor_submode = EditorMode(editor_window)
-            if editor_submode != prev_editor_submode:
-                print(f'PICO-8 editor sub-mode changed to: {editor_submode.name}')
-                prev_editor_submode = editor_submode
-            if editor_submode == EditorMode.CODE:
-                file_size = read_process_memory_int(pid, file_size_address)
-                if file_size != last_file_size:
-                    print(f'File size changed to: {file_size} characters')
-                    last_file_size = file_size
-
-                    code = read_code(pid) # Only need to read code when file size changes
-                    edited_line = get_line_from_pos(code, cursor_pos)
-                    if edited_line != -1:
-                        print(f'Code edited at line: {edited_line}')
-        elif read_process_memory_bool(pid, game_mode_address):
-            mode = Mode.GAME
-        else:
-            mode = Mode.CONSOLE
-        if mode != prev_mode:
-            print(f'PICO-8 mode changed to: {mode.name}')
-            prev_mode = mode
-        if mode == Mode.EDITOR and editor_submode == EditorMode.CODE:
-            cursor_pos = read_process_memory_int(pid, cursor_pos_address)
-            if cursor_pos != last_cursor_pos:
-                print(f'Cursor position changed to: {cursor_pos}' + (' (EOF)' if cursor_pos == file_size else ''))
-                last_cursor_pos = cursor_pos
-        time.sleep(0.1)
-    except Exception as e:
-        print('Error reading process memory:', e)
-        raise
-'''
