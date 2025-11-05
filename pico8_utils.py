@@ -213,8 +213,8 @@ class Pico8:
         current_pos = 0
         for i, line in enumerate(lines):
             current_pos += len(line)
-            if current_pos >= self.cursor_pos:
-                return i + 1  # Line numbers start at 1
+            if current_pos > self.cursor_pos:
+                return i + 1
         return len(lines)
 
     # Event hooks
