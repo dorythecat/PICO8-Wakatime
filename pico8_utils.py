@@ -8,7 +8,7 @@ dorythecat's PICO-8 Wakatime plugin, but it can be used
 in other projects as well, under the plugin's license.
 ----------------------------
 """
-import psutil, platform
+import psutil, platform, os
 from enum import Enum
 
 
@@ -18,7 +18,6 @@ game_mode_address = 0x00866A28     # Address indicating GAME mode
 cursor_pos_address = 0x005D0274    # Address for cursor position in EDITOR mode
 file_size_address = 0x005D0264     # Address for file size in EDITOR mode, in characters
 filename_address = 0x005574B2      # Address for filename string in EDITOR mode
-code_address = 0x10480F30          # Address where code section starts in memory | TODO: This is really buggy
 
 # HELPER ENUMS
 class Mode(Enum):
@@ -175,21 +174,33 @@ class Pico8:
 
     def read_code(self) -> str:
         """
-        Extract the code section from the PICO-8 process memory.
+        Extract the code section from its file.
 
-        :return: Code string read from the process memory.
+        :return: Code string read from the file.
         :raises OSError: If reading fails.
         :raises ValueError: If string terminator is not found.
         """
-        code_size = self.read_int(file_size_address) + 128  # Just to be safe
-        raw_bytes = self.read_memory(code_address, code_size)
-        terminator = raw_bytes.find(b'\x00\x00')
-        if terminator != -1:
-            raw_bytes = raw_bytes[:terminator]
-        else:
-            raise ValueError('Could not find string terminator for code section.')
-        self._code = raw_bytes.decode('utf-8', errors='ignore')
-        return self._code
+        code_file = f'{self.filename}.p8'
+        carts_path = '%APPDATA%\\pico-8\\carts' if platform.system() == 'Windows' else '~/.pico-8/carts'
+        full_path = os.path.expandvars(os.path.join(carts_path, code_file))
+        if not os.path.isfile(full_path): # Check subdirectories
+            for root, dirs, files in os.walk(os.path.dirname(full_path)):
+                if code_file in files:
+                    full_path = os.path.join(root, code_file)
+                    break
+        if not os.path.isfile(full_path):
+            raise OSError(f'Code file not found: {full_path}')
+        try:
+            with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+                code_start = content.find('__lua__')
+                code_end = content.find('__gfx__')
+                if code_start == -1:
+                    raise ValueError('Could not find code delimiters in .p8 file.')
+                self._code = content[code_start + len('__lua__'):code_end].lstrip('\n')
+                return self._code
+        except Exception as e:
+            raise OSError(f'Could not read code from file {full_path}: {e}')
 
     def get_line_from_pos(self) -> int:
         """
