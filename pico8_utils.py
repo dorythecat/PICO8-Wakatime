@@ -37,8 +37,6 @@ class Pico8:
     """
     A class representing a PICO-8 instance, providing methods to read and handle memory.
     """
-    process: psutil.Process = None
-
     mode: Mode = Mode.CONSOLE
     editor_submode: EditorMode = EditorMode.CODE
     cursor_pos: int = -1
@@ -67,7 +65,7 @@ class Pico8:
         """
         for proc in psutil.process_iter():
             if "pico8" in proc.name():
-                self.process = proc
+                self._process = proc
                 return
         raise RuntimeError("PICO-8 process not found. Is PICO-8 running?")
 
@@ -107,7 +105,7 @@ class Pico8:
 
             CloseHandle = kernel32.CloseHandle
 
-            hProcess = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, False, self.process.pid)
+            hProcess = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, False, self._process.pid)
             if not hProcess:
                 err = ctypes.get_last_error()
                 raise OSError(f'OpenProcess failed, last_error={err}')
@@ -125,11 +123,11 @@ class Pico8:
         elif system in ('Linux', 'Darwin'):
             # Attempt to read from /proc/<pid>/mem (Linux/Unix). This may require root or ptrace permissions.
             try:
-                with open(f'/proc/{self.process.pid}/mem', 'rb') as fh:
+                with open(f'/proc/{self._process.pid}/mem', 'rb') as fh:
                     fh.seek(address)
                     return fh.read(size)
             except Exception as e:
-                raise OSError(f'Unable to read /proc/{self.process.pid}/mem at {hex(address)}: {e}')
+                raise OSError(f'Unable to read /proc/{self._process.pid}/mem at {hex(address)}: {e}')
         else:
             raise NotImplementedError(f'Unsupported platform: {system}')
 
