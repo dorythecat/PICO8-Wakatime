@@ -6,6 +6,12 @@ import pico8_utils as pico8
 
 p8: pico8.Pico8 = pico8.Pico8()
 
+p8.on_mode_change(lambda mode: print(f'PICO-8 mode changed to: {mode}'))
+
+while True:
+    p8.update()
+    time.sleep(0.1)
+
 def make_heartbeat(entity: str) -> dict:
     """
     Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.

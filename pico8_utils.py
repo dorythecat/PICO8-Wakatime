@@ -54,6 +54,9 @@ class Pico8:
     _last_filename: str = ''
     _code: str = ''
 
+    # Callback functions
+    mode_change_callbacks: list[callable] = []
+
     def __init__(self):
         """
         Attempts to find the PICO-8 process by name.
@@ -240,8 +243,19 @@ class Pico8:
                 self.mode = Mode.CONSOLE
 
             if self.mode != self._prev_mode:
-                print(f'PICO-8 mode changed to: {self.mode.name}')
-                self.prev_mode = self.mode
+                for callback in self.mode_change_callbacks:
+                    callback(self.mode)
+                self._prev_mode = self.mode
         except Exception as e:
             print(f'Error updating PICO-8 state: {e}')
             raise
+
+    # Event hooks
+    def on_mode_change(self, callback: callable) -> None:
+        """
+        Register a callback for mode change events.
+
+        :param callback: The callback function to invoke on mode change.
+        :return: None
+        """
+        self.mode_change_callbacks.append(callback)
