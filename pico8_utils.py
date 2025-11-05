@@ -18,7 +18,7 @@ game_mode_address = 0x00866A28     # Address indicating GAME mode
 cursor_pos_address = 0x005D0274    # Address for cursor position in EDITOR mode
 file_size_address = 0x005D0264     # Address for file size in EDITOR mode, in characters
 filename_address = 0x005574B2      # Address for filename string in EDITOR mode
-code_address = 0x10480F30          # Address where code section starts in memory
+code_address = 0x10480F30          # Address where code section starts in memory | TODO: This is really buggy
 
 # HELPER ENUMS
 class Mode(Enum):
