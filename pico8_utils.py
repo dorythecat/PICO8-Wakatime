@@ -55,7 +55,8 @@ class Pico8:
     _code: str = ''
 
     # Callback functions
-    mode_change_callbacks: list[callable] = []
+    _mode_change_callbacks: list[callable] = []
+    _editor_submode_change_callbacks: list[callable] = []
 
     # Find running process
     def __init__(self):
@@ -218,7 +219,16 @@ class Pico8:
         :param callback: The callback function to invoke on mode change.
         :return: None
         """
-        self.mode_change_callbacks.append(callback)
+        self._mode_change_callbacks.append(callback)
+
+    def on_editor_submode_change(self, callback: callable) -> None:
+        """
+        Register a callback for editor sub-mode change events.
+
+        :param callback: The callback function to invoke on editor sub-mode change.
+        :return: None
+        """
+        self._editor_submode_change_callbacks.append(callback)
 
     # Main update loop
     def update(self):
@@ -236,7 +246,7 @@ class Pico8:
                 self.mode = Mode.EDITOR
                 self.editor_submode = EditorMode(editor_window)
                 if self.editor_submode != self._prev_editor_submode:
-                    print(f'PICO-8 editor sub-mode changed to: {self.editor_submode.name}')
+                    [callback(self.editor_submode) for callback in self._editor_submode_change_callbacks]
                     self._prev_editor_submode = self.editor_submode
 
                 if self.editor_submode == EditorMode.CODE:
@@ -256,8 +266,7 @@ class Pico8:
                 self.mode = Mode.CONSOLE
 
             if self.mode != self._prev_mode:
-                for callback in self.mode_change_callbacks:
-                    callback(self.mode)
+                [callback(self.mode) for callback in self._mode_change_callbacks]
                 self._prev_mode = self.mode
         except Exception as e:
             print(f'Error updating PICO-8 state: {e}')

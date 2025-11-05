@@ -7,6 +7,7 @@ import pico8_utils as pico8
 p8: pico8.Pico8 = pico8.Pico8()
 
 p8.on_mode_change(lambda mode: print(f'PICO-8 mode changed to: {mode}'))
+p8.on_editor_submode_change(lambda mode: print(f'PICO-8 editor submode changed to: {mode}'))
 
 while True:
     p8.update()
