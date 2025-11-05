@@ -56,6 +56,7 @@ class Pico8:
     _mode_change_callbacks: list[callable] = []
     _editor_submode_change_callbacks: list[callable] = []
     _edit_callbacks: list[callable] = []
+    _load_file_callbacks: list[callable] = []
 
     # Find running process
     def __init__(self):
@@ -244,6 +245,15 @@ class Pico8:
         """
         self._edit_callbacks.append(callback)
 
+    def on_load_file(self, callback: callable) -> None:
+        """
+        Register a callback for file load events.
+
+        :param callback: The callback function to invoke on file load.
+        :return: None
+        """
+        self._load_file_callbacks.append(callback)
+
     # Main update loop
     def update(self):
         """
@@ -252,7 +262,7 @@ class Pico8:
         try:
             self.read_filename()
             if self.filename != self._last_filename:
-                print(f'Loaded file: {self.filename}')
+                [callback(self.filename) for callback in self._load_file_callbacks]
                 self._last_filename = self.filename
 
             editor_window = self.read_int(editor_window_address)

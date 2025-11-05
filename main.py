@@ -10,6 +10,7 @@ p8.on_mode_change(lambda mode: print(f'PICO-8 mode changed to: {mode}'))
 p8.on_editor_submode_change(lambda mode: print(f'PICO-8 editor submode changed to: {mode}'))
 p8.on_edit(lambda file_size, cursor_pos, edited_line: print(
     f'Edited line {edited_line} at cursor position {cursor_pos} in file of size {file_size}'))
+p8.on_load_file(lambda filename: print(f'PICO-8 loaded file: {filename}'))
 
 while True:
     p8.update()
