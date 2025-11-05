@@ -59,7 +59,7 @@ class Pico8:
     _load_file_callbacks: list[callable] = []
 
     # Find running process
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Attempts to find the PICO-8 process by name.
 
@@ -129,7 +129,7 @@ class Pico8:
                     fh.seek(address)
                     return fh.read(size)
             except Exception as e:
-                raise OSError(f'Could not read /proc/{self.process.pid}/mem at {hex(address)}: {e}')
+                raise OSError(f'Unable to read /proc/{self.process.pid}/mem at {hex(address)}: {e}')
         else:
             raise NotImplementedError(f'Unsupported platform: {system}')
 
@@ -169,7 +169,7 @@ class Pico8:
         if terminator != -1:
             raw_bytes = raw_bytes[:terminator]
         else:
-            raise ValueError('Could not find string terminator for filename.')
+            raise ValueError('Unable to find .p8 extension for filename.')
         self.filename = raw_bytes.decode('utf-8', errors='ignore')
         return self.filename
 
@@ -197,11 +197,11 @@ class Pico8:
                 code_start = content.find('__lua__')
                 code_end = content.find('__gfx__')
                 if code_start == -1:
-                    raise ValueError('Could not find code delimiters in .p8 file.')
+                    raise ValueError(f'Unable to find code delimiters in {full_path}')
                 self._code = content[code_start + len('__lua__'):code_end].lstrip('\n')
                 return self._code
         except Exception as e:
-            raise OSError(f'Could not read code from file {full_path}: {e}')
+            raise OSError(f'Unable to read code from file {full_path}: {e}')
 
     def get_line_from_pos(self) -> int:
         """
@@ -223,7 +223,6 @@ class Pico8:
         Register a callback for mode change events.
 
         :param callback: The callback function to invoke on mode change.
-        :return: None
         """
         self._mode_change_callbacks.append(callback)
 
@@ -232,7 +231,6 @@ class Pico8:
         Register a callback for editor sub-mode change events.
 
         :param callback: The callback function to invoke on editor sub-mode change.
-        :return: None
         """
         self._editor_submode_change_callbacks.append(callback)
 
@@ -241,7 +239,6 @@ class Pico8:
         Register a callback for edit line change events.
 
         :param callback: The callback function to invoke on edit line change.
-        :return: None
         """
         self._edit_callbacks.append(callback)
 
@@ -250,12 +247,11 @@ class Pico8:
         Register a callback for file load events.
 
         :param callback: The callback function to invoke on file load.
-        :return: None
         """
         self._load_file_callbacks.append(callback)
 
     # Main update loop
-    def update(self):
+    def update(self) -> None:
         """
         Update the PICO-8 state by reading memory and detecting changes.
         """
