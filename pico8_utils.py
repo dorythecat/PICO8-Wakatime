@@ -45,7 +45,6 @@ class Pico8:
     cursor_pos: int = -1
     file_size: int = -1
     filename: str = ''
-    edited_line: int = -1
 
     _prev_mode: Mode = Mode.CONSOLE
     _prev_editor_submode: EditorMode = EditorMode.CODE
@@ -57,6 +56,7 @@ class Pico8:
     # Callback functions
     _mode_change_callbacks: list[callable] = []
     _editor_submode_change_callbacks: list[callable] = []
+    _edit_callbacks: list[callable] = []
 
     # Find running process
     def __init__(self):
@@ -135,9 +135,8 @@ class Pico8:
 
     def read_bool(self, address: int) -> bool:
         """
-        Read a boolean (1 byte) from `address` in process `pid`.
+        Read a boolean (1 byte) from `address`.
 
-        :param pid: Process ID to read from.
         :param address: Memory address to read.
         :return: Boolean value read from the process memory.
         :raises OSError: If reading fails.
@@ -148,7 +147,6 @@ class Pico8:
         """
         Read an integer of `size` bytes from `address` in process `pid`.
 
-        :param pid: Process ID to read from.
         :param address: Memory address to read.
         :param size: Number of bytes to read. (Defaults to 4 for a 32-bit integer)
         :return: Integer value read from the process memory.
@@ -160,7 +158,6 @@ class Pico8:
         """
         Extract the code section from the PICO-8 process memory.
 
-        :param pid: Process ID to read from.
         :return: Filename string read from the process memory.
         :raises OSError: If reading fails.
         :raises ValueError: If string terminator is not found.
@@ -180,7 +177,6 @@ class Pico8:
         """
         Extract the code section from the PICO-8 process memory.
 
-        :param pid: Process ID to read from.
         :return: Code string read from the process memory.
         :raises OSError: If reading fails.
         :raises ValueError: If string terminator is not found.
@@ -199,8 +195,6 @@ class Pico8:
         """
         Get the line of code at the given cursor position.
 
-        :param code: The full code string.
-        :param cursor_pos: The cursor position in characters.
         :return: The line of code at the cursor position.
         """
         lines = self._code.splitlines(keepends=True)
@@ -230,6 +224,15 @@ class Pico8:
         """
         self._editor_submode_change_callbacks.append(callback)
 
+    def on_edit(self, callback: callable) -> None:
+        """
+        Register a callback for edit line change events.
+
+        :param callback: The callback function to invoke on edit line change.
+        :return: None
+        """
+        self._edit_callbacks.append(callback)
+
     # Main update loop
     def update(self):
         """
@@ -252,14 +255,10 @@ class Pico8:
                 if self.editor_submode == EditorMode.CODE:
                     self.file_size = self.read_int(file_size_address)
                     if self.file_size != self._last_file_size:
-                        print(f'File size changed to: {self.file_size} characters')
                         self._last_file_size = self.file_size
-
                         self.read_code()  # Only need to read code when file size changes
                         self.cursor_pos = self.read_int(cursor_pos_address)
-                        self.edited_line = self.get_line_from_pos()
-                        if self.edited_line != -1:
-                            print(f'Code edited at line: {self.edited_line}')
+                        [callback(self.file_size, self.cursor_pos, self.get_line_from_pos()) for callback in self._edit_callbacks]
             elif self.read_bool(game_mode_address):
                 self.mode = Mode.GAME
             else:
