@@ -57,6 +57,7 @@ class Pico8:
     # Callback functions
     mode_change_callbacks: list[callable] = []
 
+    # Find running process
     def __init__(self):
         """
         Attempts to find the PICO-8 process by name.
@@ -69,6 +70,7 @@ class Pico8:
                 return
         raise RuntimeError("PICO-8 process not found. Is PICO-8 running?")
 
+    # Utility methods to read and process memory data
     def read_memory(self, address: int, size: int) -> bytes:
         """
         Read `size` bytes from `address` in process `pid`.
@@ -208,6 +210,17 @@ class Pico8:
                 return i + 1  # Line numbers start at 1
         return len(lines)
 
+    # Event hooks
+    def on_mode_change(self, callback: callable) -> None:
+        """
+        Register a callback for mode change events.
+
+        :param callback: The callback function to invoke on mode change.
+        :return: None
+        """
+        self.mode_change_callbacks.append(callback)
+
+    # Main update loop
     def update(self):
         """
         Update the PICO-8 state by reading memory and detecting changes.
@@ -249,13 +262,3 @@ class Pico8:
         except Exception as e:
             print(f'Error updating PICO-8 state: {e}')
             raise
-
-    # Event hooks
-    def on_mode_change(self, callback: callable) -> None:
-        """
-        Register a callback for mode change events.
-
-        :param callback: The callback function to invoke on mode change.
-        :return: None
-        """
-        self.mode_change_callbacks.append(callback)
