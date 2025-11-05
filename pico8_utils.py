@@ -63,6 +63,7 @@ class Pico8:
         for proc in psutil.process_iter():
             if "pico8" in proc.name():
                 self.process = proc
+                return
         raise RuntimeError("PICO-8 process not found. Is PICO-8 running?")
 
     def read_memory(self, address: int, size: int) -> bytes:
