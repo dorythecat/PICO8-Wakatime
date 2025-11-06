@@ -202,6 +202,15 @@ class Pico8:
             raise OSError(f'Uable to read code from file \"{full_path}\": {e}')
 
     @property
+    def total_lines(self) -> int:
+        """
+        Get the total number of lines in the currently loaded code.
+
+        :return: Total number of lines in the code.
+        """
+        return len(self._code.splitlines(keepends=True))
+
+    @property
     def edited_line(self) -> int:
         """
         Get the currently edited line number based on the current cursor position.
@@ -273,7 +282,7 @@ class Pico8:
                     if self.file_size != self._last_file_size:
                         self.read_code()  # Only need to read code when file size changes
                         self.cursor_pos = self.read_int(cursor_pos_address)
-                        [callback(self.file_size, self.cursor_pos, self.edited_line) for callback in self._edit_callbacks]
+                        [callback(self.filename, self.total_lines, self.cursor_pos, self.edited_line) for callback in self._edit_callbacks]
                         self._last_file_size = self.file_size
             elif self.read_bool(game_mode_address):
                 self.mode = Mode.GAME

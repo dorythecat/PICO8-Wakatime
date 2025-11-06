@@ -6,42 +6,46 @@ import pico8_utils as pico8
 
 p8: pico8.Pico8 = pico8.Pico8()
 
-p8.on_mode_change(lambda mode: print(f'PICO-8 mode changed to: {mode}'))
-p8.on_editor_submode_change(lambda mode: print(f'PICO-8 editor submode changed to: {mode}'))
-p8.on_edit(lambda file_size, cursor_pos, edited_line: print(
-    f'Edited line {edited_line} at cursor position {cursor_pos} in file of size {file_size}'))
-p8.on_load_file(lambda filename: print(f'PICO-8 loaded file: {filename}'))
-
-while True:
-    p8.update()
-    time.sleep(0.1)
-
-def make_heartbeat(entity: str) -> dict:
+def make_heartbeat(entity: str, total_lines: int, cursor_pos: int, edited_line: int) -> dict:
     """
     Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.
 
     :param entity: The entity (file path or app name) for the heartbeat.
+    :param total_lines: The size of the file in lines.
+    :param cursor_pos: The current cursor position in the file.
+    :param edited_line: The line number that was edited.
     :return: A dictionary representing the heartbeat.
     """
-    p8.update()
-
     return {
-        'entity': os.path.abspath(entity),
+        'entity': entity,
         'timestamp': time.time(),
         'is_write': False, # TODO: Determine if the file was modified
-        'lineno': p8.edited_line,
-        'cursorpos': p8.cursor_pos,
-        'lines_in_file': p8.file_size,
-        'project': { 'name': p8.filename },
+        'lineno': edited_line,
+        'cursorpos': cursor_pos,
+        'lines_in_file': total_lines,
+        'project': { 'name': entity },
         'folders': None
     }
 
-def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> None:
+def send_heartbeat(entity: str,
+                   total_lines: int,
+                   cursor_pos: int,
+                   edited_line: int,
+                   dry_run: bool = True,
+                   run_cli: bool = False) -> None:
     """
     Create a SendHeartbeatsThread and either print the command (dry_run)
     or start the thread to actually invoke wakatime-cli (if installed).
+
+    :param entity: The entity (file path or app name) for the heartbeat.
+    :param total_lines: The size of the file in lines.
+    :param cursor_pos: The current cursor position in the file.
+    :param edited_line: The line number that was edited.
+    :param dry_run: If True, only print the command without executing it.
+    :param run_cli: If True, start the thread to send the heartbeat.
+    :return: None
     """
-    hb = make_heartbeat(entity)
+    hb = make_heartbeat(entity, total_lines, cursor_pos, edited_line)
     thread = wakatime.SendHeartbeatsThread(hb)
 
     # Build the heartbeat the same way the thread will
@@ -61,14 +65,10 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         cmd.extend(['--key', str(bytes.decode(api_key.encode('utf8')))])
     if built.get('is_write'):
         cmd.append('--write')
-    if built.get('alternate_project'):
-        cmd.extend(['--alternate-project', built['alternate_project']])
-    if built.get('lineno') is not None:
-        cmd.extend(['--lineno', f"{built['lineno']}"])
-    if built.get('cursorpos') is not None:
-        cmd.extend(['--cursorpos', f"{built['cursorpos']}"])
-    if built.get('lines') is not None:
-        cmd.extend(['--lines-in-file', f"{built['lines']}"])
+    cmd.extend(['--project', built['project']['name']])
+    cmd.extend(['--lineno', f"{built['lineno']}"])
+    cmd.extend(['--cursorpos', f"{built['cursorpos']}"])
+    cmd.extend(['--lines-in-file', f"{built['lines']}"])
 
     # Show obfuscated command for safety
     print('WakaTime command (obfuscated):', ' '.join(wakatime.obfuscate_apikey(cmd)))
@@ -86,3 +86,14 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         thread.start()
         thread.join(timeout=10)
         print('Thread finished.')
+
+
+p8.on_mode_change(lambda mode: print(f'PICO-8 mode changed to: {mode}'))
+p8.on_editor_submode_change(lambda mode: print(f'PICO-8 editor submode changed to: {mode}'))
+p8.on_edit(lambda filename, total_lines, cursor_pos, edited_line: print(
+    f'Edited line {edited_line} at cursor position {cursor_pos} in file {filename}, with {total_lines} lines'))
+p8.on_load_file(lambda filename: print(f'PICO-8 loaded file: {filename}'))
+
+while True:
+    p8.update()
+    time.sleep(0.1)
