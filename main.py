@@ -62,7 +62,7 @@ def send_heartbeat(entity: str,
     ]
     api_key = thread.api_key
     if api_key:
-        cmd.extend(['--key', str(bytes.decode(api_key.encode('utf8')))])
+        cmd.extend(['--key', api_key])
     if built.get('is_write'):
         cmd.append('--write')
     cmd.extend(['--project', built['project']['name']])
