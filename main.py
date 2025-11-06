@@ -1,10 +1,29 @@
-import os
 import time
+from enum import Enum
 
 import wakatime
 import pico8_utils as pico8
 
+DEBUG: bool = True # Set to False to disable debug output
+
+class LogLevel(Enum):
+    INFO = 'INFO'
+    DEBUG = 'DEBUG'
+    WARNING = 'WARNING'
+    ERROR = 'ERROR'
+
 p8: pico8.Pico8 = pico8.Pico8()
+
+def log(level: LogLevel, message: str) -> None:
+    """
+    Log a message to the console if DEBUG is enabled.
+
+    :param level: The log level (INFO, DEBUG, WARNING, ERROR).
+    :param message: The message to log.
+    :return: None
+    """
+    if level in [LogLevel.WARNING, LogLevel.ERROR] or DEBUG:
+        print(f'[{level.value}] {message}')
 
 def make_heartbeat(entity: str, total_lines: int, cursor_pos: int, edited_line: int) -> dict:
     """
@@ -74,25 +93,21 @@ def send_heartbeat(entity: str,
     print('WakaTime command (obfuscated):', ' '.join(wakatime.obfuscate_apikey(cmd)))
 
     if dry_run:
-        print('Dry run: not invoking wakatime-cli. Set dry_run=False to run it.')
-        return
-
-    if not wakatime.isCliInstalled():
-        print('wakatime-cli not found at', wakatime.getCliLocation())
+        log(LogLevel.DEBUG, 'Dry run: not invoking wakatime-cli. Set dry_run=False to run it.')
         return
 
     if run_cli:
-        print('Starting background thread to send heartbeat...')
+        log(LogLevel.INFO, 'Invoking wakatime-cli to send heartbeat...')
         thread.start()
         thread.join(10)
-        print('Thread finished.')
+        log(LogLevel.INFO, 'Heartbeat sent.')
 
 
-p8.on_mode_change(lambda mode: print(f'PICO-8 mode changed to: {mode}'))
-p8.on_editor_submode_change(lambda mode: print(f'PICO-8 editor submode changed to: {mode}'))
-p8.on_edit(lambda filename, total_lines, cursor_pos, edited_line: print(
+p8.on_mode_change(lambda mode: log(LogLevel.DEBUG, f'PICO-8 mode changed to: {mode}'))
+p8.on_editor_submode_change(lambda mode: log(LogLevel.DEBUG, f'PICO-8 editor submode changed to: {mode}'))
+p8.on_edit(lambda filename, total_lines, cursor_pos, edited_line: log(LogLevel.DEBUG,
     f'Edited line {edited_line} at cursor position {cursor_pos} in file {filename}, with {total_lines} lines'))
-p8.on_load_file(lambda filename: print(f'PICO-8 loaded file: {filename}'))
+p8.on_load_file(lambda filename: log(LogLevel.DEBUG, f'PICO-8 loaded file: {filename}'))
 
 while True:
     p8.update()
