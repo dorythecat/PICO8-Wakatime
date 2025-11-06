@@ -54,7 +54,7 @@ def send_heartbeat(entity: str, dry_run: bool = True, run_cli: bool = False) -> 
         '--entity-type', 'app',
         '--time', str('%f' % built['timestamp']),
         '--plugin', 'PICO8-Wakatime/' + wakatime.__version__,
-        '--languague', 'PICO-8'
+        '--language', 'PICO-8'
     ]
     api_key = thread.api_key
     if api_key:
