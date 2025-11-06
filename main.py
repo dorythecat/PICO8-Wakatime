@@ -94,7 +94,7 @@ def send_heartbeat(entity: str,
     log(LogLevel.INFO, 'Invoking wakatime-cli to send heartbeat...')
     thread.start()
     thread.join(10)
-    log(LogLevel.INFO, 'Heartbeat sent.')
+    log(LogLevel.INFO, 'Heartbeat sent!')
 
 
 p8.on_mode_change(lambda mode: log(LogLevel.DEBUG, f'PICO-8 mode changed to: {mode}'))
