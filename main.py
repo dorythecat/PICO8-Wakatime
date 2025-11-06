@@ -25,7 +25,10 @@ def log(level: LogLevel, message: str) -> None:
     if level in [LogLevel.WARNING, LogLevel.ERROR] or DEBUG:
         print(f'[{level.value}] {message}')
 
-def make_heartbeat(entity: str, total_lines: int, cursor_pos: int, edited_line: int) -> dict:
+def make_heartbeat(entity: str,
+                   total_lines: int,
+                   cursor_pos: int,
+                   edited_line: int) -> dict:
     """
     Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.
 
