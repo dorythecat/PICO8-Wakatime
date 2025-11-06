@@ -179,16 +179,17 @@ class Pico8:
         :raises OSError: If reading fails.
         :raises ValueError: If string terminator is not found.
         """
-        code_file = f'{self.filename}.p8'
-        carts_path = '%APPDATA%\\pico-8\\carts' if platform.system() == 'Windows' else '~/.pico-8/carts'
-        full_path = os.path.expandvars(os.path.join(carts_path, code_file))
-        if not os.path.isfile(full_path): # Check subdirectories
-            for root, dirs, files in os.walk(os.path.dirname(full_path)):
-                if code_file in files:
-                    full_path = os.path.join(root, code_file)
-                    break
-        if not os.path.isfile(full_path):
-            raise OSError(f'Code file not found: {full_path}')
+        code_file = self.filename + '.p8'
+        carts_path = os.path.expandvars(
+            os.path.join('%APPDATA%' if platform.system() == 'Windows' else '~', 'pico-8', 'carts')
+        )
+        full_path = ''
+        for root, dirs, files in os.walk(carts_path):
+            if code_file in files:
+                full_path = os.path.join(root, code_file)
+                break
+        if full_path == '' or not os.path.isfile(full_path):
+            raise OSError(f'Could not find .p8 file!')
         try:
             with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
@@ -199,7 +200,7 @@ class Pico8:
                 self._code = content[code_start + len('__lua__'):code_end].lstrip('\n')
                 return self._code
         except Exception as e:
-            raise OSError(f'Uable to read code from file \"{full_path}\": {e}')
+            raise OSError(f'Unable to read code from file \"{full_path}\", encountered exception: {e}')
 
     @property
     def total_lines(self) -> int:
