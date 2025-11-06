@@ -52,9 +52,7 @@ def make_heartbeat(entity: str,
 def send_heartbeat(entity: str,
                    total_lines: int,
                    cursor_pos: int,
-                   edited_line: int,
-                   dry_run: bool = True,
-                   run_cli: bool = False) -> None:
+                   edited_line: int) -> None:
     """
     Create a SendHeartbeatsThread and either print the command (dry_run)
     or start the thread to actually invoke wakatime-cli (if installed).
@@ -63,8 +61,6 @@ def send_heartbeat(entity: str,
     :param total_lines: The size of the file in lines.
     :param cursor_pos: The current cursor position in the file.
     :param edited_line: The line number that was edited.
-    :param dry_run: If True, only print the command without executing it.
-    :param run_cli: If True, start the thread to send the heartbeat.
     :return: None
     """
     hb = make_heartbeat(entity, total_lines, cursor_pos, edited_line)
@@ -96,15 +92,10 @@ def send_heartbeat(entity: str,
     # Show obfuscated command for safety
     log(LogLevel.DEBUG, f'WakaTime command (obfuscated): {' '.join(wakatime.obfuscate_apikey(cmd))}')
 
-    if dry_run:
-        log(LogLevel.DEBUG, 'Dry run: not invoking wakatime-cli. Set dry_run=False to run it.')
-        return
-
-    if run_cli:
-        log(LogLevel.INFO, 'Invoking wakatime-cli to send heartbeat...')
-        thread.start()
-        thread.join(10)
-        log(LogLevel.INFO, 'Heartbeat sent.')
+    log(LogLevel.INFO, 'Invoking wakatime-cli to send heartbeat...')
+    thread.start()
+    thread.join(10)
+    log(LogLevel.INFO, 'Heartbeat sent.')
 
 
 p8.on_mode_change(lambda mode: log(LogLevel.DEBUG, f'PICO-8 mode changed to: {mode}'))
