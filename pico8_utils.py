@@ -204,9 +204,9 @@ class Pico8:
     @property
     def edited_line(self) -> int:
         """
-        Get the currently edited line number based on cursor position.
+        Get the currently edited line number based on the current cursor position.
 
-        :return: Line number being edited (1-based).
+        :return: Line number being edited.
         """
         lines = self._code.splitlines(keepends=True)
         current_pos = 0
@@ -271,10 +271,10 @@ class Pico8:
                 if self.editor_submode == EditorMode.CODE:
                     self.file_size = self.read_int(file_size_address)
                     if self.file_size != self._last_file_size:
-                        self._last_file_size = self.file_size
                         self.read_code()  # Only need to read code when file size changes
                         self.cursor_pos = self.read_int(cursor_pos_address)
-                        [callback(self.file_size, self.cursor_pos, self.get_line_from_pos()) for callback in self._edit_callbacks]
+                        [callback(self.file_size, self.cursor_pos, self.edited_line) for callback in self._edit_callbacks]
+                        self._last_file_size = self.file_size
             elif self.read_bool(game_mode_address):
                 self.mode = Mode.GAME
             else:
