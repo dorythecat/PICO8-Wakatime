@@ -94,7 +94,7 @@ def send_heartbeat(entity: str,
     cmd.extend(['--lines-in-file', f"{built['lines']}"])
 
     # Show obfuscated command for safety
-    print('WakaTime command (obfuscated):', ' '.join(wakatime.obfuscate_apikey(cmd)))
+    log(LogLevel.DEBUG, f'WakaTime command (obfuscated): {' '.join(wakatime.obfuscate_apikey(cmd))}')
 
     if dry_run:
         log(LogLevel.DEBUG, 'Dry run: not invoking wakatime-cli. Set dry_run=False to run it.')
