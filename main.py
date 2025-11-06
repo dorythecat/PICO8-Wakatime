@@ -6,6 +6,10 @@ import pico8_utils as pico8
 
 DEBUG: bool = True # Set to False to disable debug output
 
+# Timer for checking file changes when editing everything but code
+change_check_timer: int = 1200 # 120 seconds = 2 minutes
+last_file_hash: str = ''
+
 class LogLevel(Enum):
     INFO = 'INFO'
     DEBUG = 'DEBUG'
@@ -96,13 +100,35 @@ def send_heartbeat(entity: str,
     thread.join(10)
     log(LogLevel.INFO, 'Heartbeat sent!')
 
+def new_file_loaded(filename: str) -> None:
+    """
+    Callback for when a new file is loaded in PICO-8.
 
-p8.on_mode_change(lambda mode: log(LogLevel.DEBUG, f'PICO-8 mode changed to: {mode}'))
-p8.on_editor_submode_change(lambda mode: log(LogLevel.DEBUG, f'PICO-8 editor submode changed to: {mode}'))
-p8.on_edit(lambda filename, total_lines, cursor_pos, edited_line: log(LogLevel.DEBUG,
-    f'Edited line {edited_line} at cursor position {cursor_pos} in file {filename}, with {total_lines} lines'))
-p8.on_load_file(lambda filename: log(LogLevel.DEBUG, f'PICO-8 loaded file: {filename}'))
+    :param filename: The name of the file that was loaded.
+    :return: None
+    """
+    global last_file_hash, change_check_timer
 
+    log(LogLevel.INFO, f'New file loaded: {filename}')
+    last_file_hash = p8.file_hash
+    change_check_timer = 1200 # Reset timer
+
+p8.on_load_file(new_file_loaded) # Update last_file_hash and timer on file load
+p8.on_edit(send_heartbeat) # Send heartbeat on code edits
 while True:
     p8.update()
+    change_check_timer -= 1
+    if change_check_timer <= 0:
+        change_check_timer = 1200 # Reset timer
+        if p8.mode == pico8.Mode.EDITOR and p8.editor_submode != pico8.EditorMode.CODE:
+            file_hash = p8.file_hash
+            if file_hash != last_file_hash:
+                last_file_hash = file_hash
+                log(LogLevel.INFO, 'Detected file change in non-code editor mode.')
+                send_heartbeat(
+                    entity=p8.filename,
+                    total_lines=p8.total_lines,
+                    cursor_pos=p8.cursor_pos,
+                    edited_line=p8.edited_line
+                )
     time.sleep(0.1)
