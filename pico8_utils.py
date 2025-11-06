@@ -72,7 +72,7 @@ class Pico8:
     # Utility methods to read and process memory data
     def read_memory(self, address: int, size: int) -> bytes:
         """
-        Read `size` bytes from `address` in process `pid`.
+        Read `size` bytes from `address` in the PICO-8 process.
 
         On Windows uses ReadProcessMemory via ctypes. On Unix tries /proc/<pid>/mem (may require root or ptrace).
 
