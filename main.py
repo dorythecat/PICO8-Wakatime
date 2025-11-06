@@ -87,7 +87,8 @@ def send_heartbeat(entity: str,
         cmd.extend(['--key', api_key])
     if built.get('is_write'):
         cmd.append('--write')
-    cmd.extend(['--project', built['project']['name']])
+    if built.get('alternate_project'):
+        cmd.extend(['--alternate-project', built['alternate_project']])
     cmd.extend(['--lineno', f"{built['lineno']}"])
     cmd.extend(['--cursorpos', f"{built['cursorpos']}"])
     cmd.extend(['--lines-in-file', f"{built['lines']}"])
