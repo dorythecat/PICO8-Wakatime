@@ -25,7 +25,6 @@ class Popen(subprocess.Popen):
     """
     Patched Popen to prevent opening cmd window on Windows platform.
     """
-
     def __init__(self, *args, **kwargs):
         if is_win:
             startupinfo = kwargs.get('startupinfo')
@@ -76,20 +75,18 @@ def parseConfigFile(configFile: str) -> ConfigParser | None:
     :param configFile: Absolute path to config file.
     :return: ConfigParser instance or None if error occurs.
     """
-
-    kwargs = {'strict': False}
+    kwargs = { 'strict': False }
     configs = ConfigParser(**kwargs)
     try:
         with open(configFile, 'r', encoding='utf-8') as fh:
             try:
                 configs.read_file(fh)
-                return configs
             except Exception as e:
                 log(ERROR, e)
                 return None
     except IOError:
-        log(DEBUG, f'Error: Could not read from config file {configFile}\n')
-        return configs
+        log(ERROR, f'Error: Could not read from config file {configFile}\n')
+    return configs
 
 class ApiKey(object):
     _key = None
@@ -151,8 +148,7 @@ class ApiKey(object):
         global SETTINGS
         self._key = key
         SETTINGS['api_key'] = key
-        # TODO: Svae settings
-        # sublime.save_settings(SETTINGS_FILE)
+        # TODO: Save settings
 
 APIKEY = ApiKey()
 
@@ -198,7 +194,6 @@ def find_folder_containing_file(folders: list, current_file: str) -> str | None:
     :param current_file: Absolute path to current file.
     :return: Absolute path to folder containing the file, or None if not found.
     """
-
     parent_folder = None
     current_folder = current_file
     while True:
@@ -221,7 +216,6 @@ def find_project_from_folders(folders: list, current_file: str) -> str | None:
     :param current_file: Absolute path to current file.
     :return: Project name or None if not found.
     """
-
     folder = find_folder_containing_file(folders, current_file)
     return os.path.basename(folder) if folder else None
 
@@ -307,7 +301,6 @@ class SendHeartbeatsThread(threading.Thread):
     """
     Non-blocking thread for sending heartbeats to api.
     """
-
     def __init__(self, heartbeat: dict) -> None:
         threading.Thread.__init__(self)
 
@@ -421,7 +414,7 @@ class SendHeartbeatsThread(threading.Thread):
             output, _err = process.communicate(input=inp)
             retcode = process.poll()
             if retcode:
-                log(DEBUG if retcode == 102 or retcode == 112 else ERROR, f'wakatime-core exited with status: {retcode}')
+                log(DEBUG if retcode in [102, 112] else ERROR, f'wakatime-core exited with status: {retcode}')
             if output:
                 log(ERROR, f'wakatime-core output: {output}')
         except Exception as e:
@@ -431,7 +424,6 @@ class UpdateCLI(threading.Thread):
     """
     Non-blocking thread for downloading latest wakatime-cli from GitHub.
     """
-
     def run(self) -> None:
         if isCliLatest():
             return
@@ -454,7 +446,7 @@ class UpdateCLI(threading.Thread):
                 try:
                     os.remove(getCliLocation())
                 except Exception as e:
-                    log(DEBUG, e)
+                    log(ERROR, e)
 
             log(INFO, 'Extracting wakatime-cli...')
             with ZipFile(zip_file) as zf:
@@ -466,12 +458,11 @@ class UpdateCLI(threading.Thread):
             try:
                 os.remove(os.path.join(RESOURCES_FOLDER, 'wakatime-cli.zip'))
             except Exception as e:
-                log(DEBUG, e)
+                log(ERROR, e)
         except Exception as e:
-            log(DEBUG, e)
+            log(ERROR, e)
 
         createSymlink()
-
         log(INFO, 'Finished extracting wakatime-cli.')
 
 def getCliLocation() -> str:
@@ -503,7 +494,7 @@ def isCliLatest() -> bool:
     try:
         stdout, stderr = Popen(args, stdout=PIPE, stderr=PIPE).communicate()
     except Exception as e:
-        log(DEBUG, e)
+        log(ERROR, e)
         return False
     stdout = (stdout or b'') + (stderr or b'')
     localVer = extractVersion(stdout.decode('utf-8'))
@@ -561,12 +552,15 @@ def getLatestCliVersion() -> str | None:
             configs.set('internal', 'cli_version', ver)
             configs.set('internal', 'cli_version_last_modified', last_modified)
             with open(INTERNAL_CONFIG_FILE, 'w', encoding='utf-8') as fh:
-                configs.write(fh)
+                try:
+                    configs.write(fh)
+                except Exception as e:
+                    log(ERROR, e)
 
         LATEST_CLI_VERSION = ver
         return ver
     except Exception as e:
-        log(DEBUG, e)
+        log(ERROR, e)
     return None
 
 def lastModifiedAndVersion(configs) -> tuple[str | None, str | None]:
@@ -606,6 +600,15 @@ def reportMissingPlatformSupport(osname: str, arch: str) -> None:
     request(url)
 
 def request(url: str, last_modified: str = None) -> tuple[dict | None, bytes | None, int]:
+    """
+    Makes a GET request to the given URL with optional If-Modified-Since header.
+
+    :param url: The URL to request.
+    :param last_modified: Optional last modified timestamp for caching.
+    :return: A tuple containing the response headers, content, and HTTP status code.
+    :raises HTTPError: If an HTTP error occurs.
+    :raises IOError: If an I/O error occurs.
+    """
     req = Request(url)
     req.add_header('User-Agent', 'github.com/dorythecat/PICO8-Wakatime')
 
@@ -620,15 +623,25 @@ def request(url: str, last_modified: str = None) -> tuple[dict | None, bytes | N
         resp = urlopen(req)
         headers = resp.headers
         return headers, resp.read(), resp.getcode()
-    except HTTPError as err:
-        if err.code == 304:
+    except HTTPError as e:
+        if e.code == 304:
             return None, None, 304
-        log(DEBUG, err.read().decode())
+        log(ERROR, e.read().decode())
         raise
-    except IOError:
+    except IOError as e:
+        log(ERROR, e)
         raise
 
 def download(url: str, filePath: str) -> tuple[None, None, int] | None:
+    """
+    Downloads a file from the given URL to the specified file path.
+
+    :param url: The URL to download the file from.
+    :param filePath: The local file path to save the downloaded file.
+    :return: A tuple containing None values and HTTP status code 304 if not modified, or None.
+    :raises HTTPError: If an HTTP error occurs.
+    :raises IOError: If an I/O error occurs.
+    """
     req = Request(url)
     req.add_header('User-Agent', 'github.com/dorythecat/PICO8-Wakatime')
 
@@ -640,12 +653,13 @@ def download(url: str, filePath: str) -> tuple[None, None, int] | None:
         try:
             resp = urlopen(req)
             fh.write(resp.read())
-        except HTTPError as err:
-            if err.code == 304:
+        except HTTPError as e:
+            if e.code == 304:
                 return None, None, 304
-            log(DEBUG, err.read().decode())
+            log(DEBUG, e.read().decode())
             raise
-        except IOError:
+        except IOError as e:
+            log(ERROR, e)
             raise
 
 def is_symlink(path: str) -> bool:
