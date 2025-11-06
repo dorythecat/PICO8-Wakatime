@@ -209,7 +209,7 @@ class Pico8:
 
         :return: Total number of lines in the code.
         """
-        return len(self._code.splitlines(keepends=True))
+        return len(self._code.splitlines(True))
 
     @property
     def edited_line(self) -> int:
@@ -218,7 +218,7 @@ class Pico8:
 
         :return: Line number being edited.
         """
-        lines = self._code.splitlines(keepends=True)
+        lines = self._code.splitlines(True)
         current_pos = 0
         for i, line in enumerate(lines):
             current_pos += len(line)
