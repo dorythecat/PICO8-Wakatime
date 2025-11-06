@@ -78,9 +78,8 @@ def send_heartbeat(entity: str,
         '--plugin', 'PICO8-Wakatime/' + wakatime.__version__,
         '--language', 'PICO-8'
     ]
-    api_key = thread.api_key
-    if api_key:
-        cmd.extend(['--key', api_key])
+    if thread.api_key:
+        cmd.extend(['--key', thread.api_key])
     if built.get('is_write'):
         cmd.append('--write')
     if built.get('alternate_project'):
