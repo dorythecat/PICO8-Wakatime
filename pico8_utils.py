@@ -8,7 +8,7 @@ dorythecat's PICO-8 Wakatime plugin, but it can be used
 in other projects as well, under the plugin's license.
 ----------------------------
 """
-import psutil, platform, os
+import psutil, platform, os, hashlib
 from enum import Enum
 
 
@@ -201,6 +201,34 @@ class Pico8:
                 return self._code
         except Exception as e:
             raise OSError(f'Unable to read code from file \"{full_path}\", encountered exception: {e}')
+
+    @property
+    def file_hash(self) -> str:
+        """
+        Get a hash of the currently used .p8 file.
+
+        :return: Hash string of the file.
+        :raises OSError: If reading fails.
+        """
+        code_file = self.filename + '.p8'
+        carts_path = os.path.expandvars(
+            os.path.join('%APPDATA%' if platform.system() == 'Windows' else '~', 'pico-8', 'carts')
+        )
+        full_path = ''
+        for root, dirs, files in os.walk(carts_path):
+            if code_file in files:
+                full_path = os.path.join(root, code_file)
+                break
+        if full_path == '' or not os.path.isfile(full_path):
+            raise OSError(f'Could not find .p8 file!')
+        hasher = hashlib.sha256()
+        try:
+            with open(full_path, 'rb') as f:
+                while chunk := f.read(8192):
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        except Exception as e:
+            raise OSError(f'Unable to read file \"{full_path}\" for hashing, encountered exception: {e}')
 
     @property
     def total_lines(self) -> int:
