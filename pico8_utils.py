@@ -295,4 +295,4 @@ class Pico8:
                 self._prev_mode = self.mode
         except Exception as e:
             print(f'Error updating PICO-8 state: {e}')
-            raise
+            raise e

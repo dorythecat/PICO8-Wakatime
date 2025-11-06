@@ -627,10 +627,10 @@ def request(url: str, last_modified: str = None) -> tuple[dict | None, bytes | N
         if e.code == 304:
             return None, None, 304
         log(ERROR, e.read().decode())
-        raise
+        raise e
     except IOError as e:
         log(ERROR, e)
-        raise
+        raise e
 
 def download(url: str, filePath: str) -> tuple[None, None, int] | None:
     """
@@ -657,10 +657,10 @@ def download(url: str, filePath: str) -> tuple[None, None, int] | None:
             if e.code == 304:
                 return None, None, 304
             log(DEBUG, e.read().decode())
-            raise
+            raise e
         except IOError as e:
             log(ERROR, e)
-            raise
+            raise e
 
 def is_symlink(path: str) -> bool:
     try:
