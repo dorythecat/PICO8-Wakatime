@@ -27,12 +27,13 @@ def log(level: LogLevel, message: str) -> None:
     :return: None
     """
     if level in [LogLevel.WARNING, LogLevel.ERROR] or DEBUG:
-        print(f'[{level.value}] {message}')
+        print(f'[{level.name}] {message}')
 
 def make_heartbeat(entity: str,
                    total_lines: int,
                    cursor_pos: int,
-                   edited_line: int) -> dict:
+                   edited_line: int,
+                   editor_mode: pico8.EditorMode) -> dict:
     """
     Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.
 
@@ -49,14 +50,15 @@ def make_heartbeat(entity: str,
         'lineno': edited_line,
         'cursorpos': cursor_pos,
         'lines_in_file': total_lines,
-        'project': { 'name': entity },
+        'project': { 'name': entity + '-' + editor_mode.name },
         'folders': None
     }
 
 def send_heartbeat(entity: str,
                    total_lines: int,
                    cursor_pos: int,
-                   edited_line: int) -> None:
+                   edited_line: int,
+                   editor_mode: pico8.EditorMode = pico8.EditorMode.CODE) -> None:
     """
     Create a SendHeartbeatsThread and either print the command (dry_run)
     or start the thread to actually invoke wakatime-cli (if installed).
@@ -67,7 +69,7 @@ def send_heartbeat(entity: str,
     :param edited_line: The line number that was edited.
     :return: None
     """
-    hb = make_heartbeat(entity, total_lines, cursor_pos, edited_line)
+    hb = make_heartbeat(entity, total_lines, cursor_pos, edited_line, editor_mode)
     thread = wakatime.SendHeartbeatsThread(hb)
 
     # Build the heartbeat the same way the thread will
@@ -125,10 +127,5 @@ while True:
             if file_hash != last_file_hash:
                 last_file_hash = file_hash
                 log(LogLevel.INFO, 'Detected file change in non-code editor mode.')
-                send_heartbeat(
-                    entity=p8.filename,
-                    total_lines=p8.total_lines,
-                    cursor_pos=p8.cursor_pos,
-                    edited_line=p8.edited_line
-                )
+                send_heartbeat(p8.filename, p8.total_lines, p8.cursor_pos, p8.edited_line, p8.editor_submode)
     time.sleep(0.1)
