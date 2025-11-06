@@ -201,11 +201,12 @@ class Pico8:
         except Exception as e:
             raise OSError(f'Unable to read code from file {full_path}: {e}')
 
-    def get_line_from_pos(self) -> int:
+    @property
+    def edited_line(self) -> int:
         """
-        Get the line of code at the given cursor position.
+        Get the currently edited line number based on cursor position.
 
-        :return: The line of code at the cursor position.
+        :return: Line number being edited (1-based).
         """
         lines = self._code.splitlines(keepends=True)
         current_pos = 0
