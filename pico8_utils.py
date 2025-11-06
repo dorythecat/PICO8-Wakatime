@@ -195,11 +195,11 @@ class Pico8:
                 code_start = content.find('__lua__')
                 code_end = content.find('__gfx__')
                 if code_start == -1:
-                    raise ValueError(f'Unable to find code delimiters in {full_path}')
+                    raise ValueError(f'Unable to find code delimiters in \"{full_path}\"')
                 self._code = content[code_start + len('__lua__'):code_end].lstrip('\n')
                 return self._code
         except Exception as e:
-            raise OSError(f'Unable to read code from file {full_path}: {e}')
+            raise OSError(f'Uable to read code from file \"{full_path}\": {e}')
 
     @property
     def edited_line(self) -> int:
