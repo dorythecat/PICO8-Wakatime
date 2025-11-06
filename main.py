@@ -84,7 +84,7 @@ def send_heartbeat(entity: str,
     if run_cli:
         print('Starting background thread to send heartbeat...')
         thread.start()
-        thread.join(timeout=10)
+        thread.join(10)
         print('Thread finished.')
 
 
