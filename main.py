@@ -32,8 +32,7 @@ def log(level: LogLevel, message: str) -> None:
 def make_heartbeat(entity: str,
                    total_lines: int,
                    cursor_pos: int,
-                   edited_line: int,
-                   editor_mode: pico8.EditorMode) -> dict:
+                   edited_line: int) -> dict:
     """
     Return a heartbeat dict compatible with wakatime.SendHeartbeatsThread.
 
@@ -50,7 +49,7 @@ def make_heartbeat(entity: str,
         'lineno': edited_line,
         'cursorpos': cursor_pos,
         'lines_in_file': total_lines,
-        'project': { 'name': entity + '-' + editor_mode.name },
+        'project': { 'name': entity },
         'folders': None
     }
 
@@ -67,9 +66,10 @@ def send_heartbeat(entity: str,
     :param total_lines: The size of the file in lines.
     :param cursor_pos: The current cursor position in the file.
     :param edited_line: The line number that was edited.
+    :param editor_mode: The current editor mode in PICO-8.
     :return: None
     """
-    hb = make_heartbeat(entity, total_lines, cursor_pos, edited_line, editor_mode)
+    hb = make_heartbeat(entity, total_lines, cursor_pos, edited_line)
     thread = wakatime.SendHeartbeatsThread(hb)
 
     # Build the heartbeat the same way the thread will
@@ -82,7 +82,11 @@ def send_heartbeat(entity: str,
         '--entity-type', 'app',
         '--time', str('%f' % built['timestamp']),
         '--plugin', 'PICO8-Wakatime/' + wakatime.__version__,
-        '--language', 'PICO-8'
+        '--language', 'PICO-8',
+        '--lineno', f'{built['lineno']}',
+        '--cursorpos', f'{built['cursorpos']}',
+        '--lines-in-file', f'{built['lines_in_file']}',
+        '--category', editor_mode.name
     ]
     if thread.api_key:
         cmd.extend(['--key', thread.api_key])
@@ -90,9 +94,6 @@ def send_heartbeat(entity: str,
         cmd.append('--write')
     if built.get('alternate_project'):
         cmd.extend(['--alternate-project', built['alternate_project']])
-    cmd.extend(['--lineno', f"{built['lineno']}"])
-    cmd.extend(['--cursorpos', f"{built['cursorpos']}"])
-    cmd.extend(['--lines-in-file', f"{built['lines']}"])
 
     # Show obfuscated command for safety
     log(LogLevel.DEBUG, f'WakaTime command (obfuscated): {' '.join(wakatime.obfuscate_apikey(cmd))}')
