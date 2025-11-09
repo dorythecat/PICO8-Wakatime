@@ -83,9 +83,9 @@ def send_heartbeat(entity: str,
         '--time', str('%f' % built['timestamp']),
         '--plugin', 'PICO8-Wakatime/' + wakatime.__version__,
         '--language', 'PICO-8',
-        '--lineno', f'{built['lineno']}',
-        '--cursorpos', f'{built['cursorpos']}',
-        '--lines-in-file', f'{built['lines_in_file']}',
+        '--lineno', f'{edited_line}',
+        '--cursorpos', f'{cursor_pos}',
+        '--lines-in-file', f'{total_lines}',
         '--category', editor_mode.name
     ]
     if thread.api_key:
