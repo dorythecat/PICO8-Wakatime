@@ -113,6 +113,9 @@ def new_file_loaded(filename: str) -> None:
     global last_file_hash, change_check_timer
 
     log(LogLevel.INFO, f'New file loaded: {filename}')
+    if p8.file_size <= 0:
+        log(LogLevel.WARNING, 'Loaded file is empty or no file is loaded.')
+        return
     last_file_hash = p8.file_hash
     change_check_timer = 1200 # Reset timer
 
