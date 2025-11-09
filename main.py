@@ -49,7 +49,7 @@ def make_heartbeat(entity: str,
         'lineno': edited_line,
         'cursorpos': cursor_pos,
         'lines_in_file': total_lines,
-        'project': { 'name': entity },
+        'project': { 'name': f'PICO-8/{entity}' },
         'folders': None
     }
 
