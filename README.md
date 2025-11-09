@@ -22,3 +22,6 @@ torturing yourself.
 This module falls under the same license as the rest of the
 code in this repository, just keep that in mind when using it.
 Thank you. <3
+
+# Demo Video
+![Demo Video](demo.mp4)
