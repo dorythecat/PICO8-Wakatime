@@ -124,6 +124,8 @@ while True:
     if change_check_timer <= 0:
         change_check_timer = 1200 # Reset timer
         if p8.mode == pico8.Mode.EDITOR and p8.editor_submode != pico8.EditorMode.CODE:
+            if p8.file_size <= 0:
+                continue # Skip empty files or when we don't have a file loaded
             file_hash = p8.file_hash
             if file_hash != last_file_hash:
                 last_file_hash = file_hash
