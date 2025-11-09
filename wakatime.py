@@ -80,6 +80,15 @@ def parseConfigFile(configFile: str) -> ConfigParser | None:
     try:
         with open(configFile, 'r', encoding='utf-8') as fh:
             try:
+                first_line = fh.readline()
+                if first_line.startswith('\ufeff'):
+                    first_line = first_line.replace('\ufeff', '')
+                    rest_of_file = fh.read()
+                    fh.close()
+                    with open(configFile, 'w', encoding='utf-8') as fix_fh:
+                        fix_fh.write(first_line + rest_of_file)
+                    fh = open(configFile, 'r', encoding='utf-8')
+                fh.seek(0)
                 configs.read_file(fh)
             except Exception as e:
                 log(ERROR, e)
